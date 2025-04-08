@@ -26,6 +26,8 @@ load_dotenv()
 # Set application environment variables
 os.environ["ENABLE_GOOGLE_MAPS_SCRAPING"] = "true"  # Google Maps scraping enabled but needs to be opted into
 os.environ["GOOGLE_MAPS_ENRICHMENT_LIMIT"] = "2"    # Limit to 2 deals per request for better performance
+os.environ["DEFAULT_LOCATION"] = "Berlin, Germany"  # Restrict all searches to Berlin, Germany
+os.environ["RESTRICT_TO_BERLIN"] = "true"           # Flag to restrict all results to Berlin only
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -447,6 +449,55 @@ def clean_dataset():
         flash(f"Error cleaning dataset: {str(e)}", "danger")
     
     return redirect(url_for("home"))
+
+@app.route("/remove-austin-texas", methods=["GET"])
+def remove_austin_texas():
+    """Route to specifically remove Austin, Texas locations and American-style addresses"""
+    try:
+        import re
+        # Define American/Austin indicators
+        austin_indicators = [
+            "austin", "texas", "atx", "tx", "6th street", "6th st", "congress avenue", 
+            "rainey street", "south congress", "guadalupe", "the drag", "soco"
+        ]
+        
+        deals = deal_db.get_all_deals()
+        deleted_count = 0
+        
+        for deal in deals:
+            business_name = deal.get('business_name')
+            location = deal.get('location', '').lower()
+            deal_text = deal.get('deal', '').lower()
+            
+            # Skip if no business name
+            if not business_name:
+                continue
+            
+            # Check if this is an Austin/Texas location
+            is_austin = any(indicator in location or indicator in deal_text for indicator in austin_indicators)
+            
+            # Also check for American-style addresses with numbers and street names
+            is_american_address = False
+            if re.search(r'\d+\s+\w+\s+(st|ave|blvd|rd|dr|ln|way)', location):
+                is_american_address = True
+            
+            # Delete if it's an Austin location or American-style address
+            if is_austin or is_american_address:
+                try:
+                    deal_db.delete_deal(business_name)
+                    deleted_count += 1
+                    logger.info(f"Deleted Austin/Texas location: {business_name} - {location}")
+                except Exception as e:
+                    logger.error(f"Error deleting deal {business_name}: {str(e)}")
+        
+        logger.info(f"Removed {deleted_count} Austin/American locations from the dataset")
+        flash(f"Successfully removed {deleted_count} Austin/American locations", "success")
+        return redirect(url_for("home"))
+    
+    except Exception as e:
+        logger.error(f"Error removing Austin locations: {str(e)}")
+        flash(f"Error removing Austin locations: {str(e)}", "danger")
+        return redirect(url_for("home"))
 
 @app.errorhandler(404)
 def page_not_found(e):

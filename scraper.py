@@ -505,7 +505,8 @@ class YelpScraper:
     def clean_dataset():
         """Cleans the dataset by ensuring all deals have Berlin in their location or a district set.
         Also standardizes the locations to include Berlin if missing, and REMOVES any deals
-        that have non-Berlin locations (like American street names or other countries)."""
+        that have non-Berlin locations (like American street names or other countries).
+        Specifically removes any locations referencing Austin, Texas or American-style addresses."""
         from db import DealDB
         deal_db = DealDB()
         deals = deal_db.get_all_deals()
@@ -539,13 +540,17 @@ class YelpScraper:
         # List of common U.S. states and cities that suggest non-Berlin locations
         us_locations = [
             "new york", "los angeles", "chicago", "houston", "philadelphia", "phoenix", 
-            "san antonio", "san diego", "dallas", "san jose", "austin", "jacksonville", 
+            "san antonio", "san diego", "dallas", "san jose", "jacksonville", 
             "san francisco", "columbus", "charlotte", "seattle", "denver", "washington dc",
             "boston", "portland", "las vegas", "nashville", "baltimore", "oklahoma city",
-            "california", "texas", "florida", "new york", "pennsylvania", "illinois", 
+            "california", "florida", "new york", "pennsylvania", "illinois", 
             "ohio", "georgia", "michigan", "north carolina", "new jersey", "virginia",
             "washington", "arizona", "massachusetts", "tennessee", "indiana", "missouri",
-            "usa", "united states", "america", "nyc", "la", "sf", "nj", "ny"
+            "usa", "united states", "america", "nyc", "la", "sf", "nj", "ny",
+            # Explicitly prioritize Austin and Texas detection
+            "austin", "texas", "atx", "tx", "sixth street", "6th street", "east austin", 
+            "south austin", "north austin", "west austin", "downtown austin", "congress avenue",
+            "rainey street", "south congress", "guadalupe street", "the drag", "soco"
         ]
         
         for deal in deals:
@@ -642,7 +647,7 @@ class YelpScraper:
         return cleaned_count + deleted_count
         
     @staticmethod
-    def scrape(location="Berlin", limit=5, enrich_with_google=False):
+    def scrape(location=None, limit=5, enrich_with_google=False):
         """
         Generate happy hour deals for the specified location
         
@@ -655,12 +660,22 @@ class YelpScraper:
             list: List of dictionaries containing deal information
         """
         try:
+            # Force Berlin location if RESTRICT_TO_BERLIN flag is set
+            restrict_to_berlin = os.environ.get("RESTRICT_TO_BERLIN", "").lower() in ("true", "1", "yes")
+            default_location = os.environ.get("DEFAULT_LOCATION", "Berlin, Germany")
+            
+            # Override location if restriction is enabled or location is not provided
+            if location is None or restrict_to_berlin:
+                location = default_location
+                logger.info(f"Location restricted to Berlin: {location}")
+            
             logger.debug(f"Generating happy hour deals for {location}")
             
             # Determine the appropriate region data for this location
-            region_data = YelpScraper.get_region_for_location(location)
+            # Always use Berlin-specific data for Germany
+            region_data = YelpScraper.GLOBAL_REGIONS.get("berlin", YelpScraper.GLOBAL_REGIONS.get("de"))
             
-            # Generate region-specific deals
+            # Generate Berlin-specific deals
             deals = YelpScraper.generate_deals_for_region(region_data, location, limit)
             
             # Enrich with Google Maps data if explicitly requested
