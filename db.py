@@ -32,6 +32,7 @@ class DealDB:
                 place_type (str): Type of establishment (Bar, Restaurant, etc.)
                 price_level (int): Price level (1-4)
                 google_maps_url (str): URL to Google Maps page
+                votes (int): Number of upvotes for this deal
         """
         try:
             if not business_name or not deal or not location:
@@ -41,7 +42,8 @@ class DealDB:
                 "deal": deal,
                 "location": location,
                 "scraped_at": str(datetime.now()),
-                "has_accurate_location": kwargs.get("has_accurate_location", False)
+                "has_accurate_location": kwargs.get("has_accurate_location", False),
+                "votes": kwargs.get("votes", 0)  # Initialize votes to 0 by default
             }
             
             # Add optional fields from kwargs
@@ -151,4 +153,71 @@ class DealDB:
             return True
         except Exception as e:
             logger.error(f"Error clearing deals: {str(e)}")
+            raise
+    
+    def upvote_deal(self, business_name):
+        """
+        Increment the vote count for a deal
+        
+        Args:
+            business_name (str): Name of the business
+            
+        Returns:
+            dict: Updated deal data with new vote count or None if not found
+        """
+        try:
+            if business_name not in self.db:
+                logger.warning(f"Cannot upvote non-existent deal: {business_name}")
+                return None
+                
+            deal_data = self.db[business_name]
+            
+            # Convert to a regular dictionary if needed
+            if hasattr(deal_data, "value"):
+                deal_data = deal_data.value
+                
+            # Ensure votes field exists
+            if "votes" not in deal_data:
+                deal_data["votes"] = 0
+                
+            # Increment vote count
+            deal_data["votes"] += 1
+            
+            # Update the deal in the database
+            self.db[business_name] = deal_data
+            logger.debug(f"Upvoted deal for {business_name}, new count: {deal_data['votes']}")
+            
+            # Return the updated deal data with the business name included
+            result = deal_data.copy()
+            result["business_name"] = business_name
+            return result
+        except Exception as e:
+            logger.error(f"Error upvoting deal: {str(e)}")
+            raise
+            
+    def get_top_voted_deals(self, limit=10):
+        """
+        Get deals sorted by vote count (highest first)
+        
+        Args:
+            limit (int): Maximum number of deals to return
+            
+        Returns:
+            list: List of deals sorted by votes
+        """
+        try:
+            deals = self.get_all_deals()
+            
+            # Ensure each deal has a votes field (default to 0 if missing)
+            for deal in deals:
+                if "votes" not in deal:
+                    deal["votes"] = 0
+                    
+            # Sort by votes (highest first)
+            sorted_deals = sorted(deals, key=lambda x: x.get("votes", 0), reverse=True)
+            
+            # Return at most 'limit' deals
+            return sorted_deals[:limit]
+        except Exception as e:
+            logger.error(f"Error getting top voted deals: {str(e)}")
             raise

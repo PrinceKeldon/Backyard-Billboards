@@ -63,6 +63,21 @@
                     </div>
                 </div>
                 
+                <!-- Sort options -->
+                <div class="col-12 mt-2">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="sort" id="sort_date" value="date" autocomplete="off" {% if sort_by == 'date' or not sort_by %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="sort_date">
+                            <i class="fas fa-calendar-alt me-1"></i> Sort by Date
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="sort" id="sort_votes" value="votes" autocomplete="off" {% if sort_by == 'votes' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="sort_votes">
+                            <i class="fas fa-thumbs-up me-1"></i> Sort by Votes
+                        </label>
+                    </div>
+                </div>
+                
                 <!-- Submit and reset buttons -->
                 <div class="col-12 mt-2">
                     <div class="d-flex justify-content-between">
@@ -210,14 +225,20 @@
                 {% endif %}
             </div>
             <div class="card-footer text-muted d-flex justify-content-between align-items-center">
-                <small>
-                    <i class="far fa-clock me-1"></i>
-                    {% if deal.scraped_at %}
-                        Added {{ deal.scraped_at | to_time_ago }}
-                    {% else %}
-                        Recently added
-                    {% endif %}
-                </small>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-sm btn-outline-danger me-2 upvote-btn" data-business="{{ deal.business_name }}" title="Upvote this deal">
+                        <i class="fas fa-thumbs-up me-1"></i>
+                        <span class="vote-count">{{ deal.votes|default(0) }}</span>
+                    </button>
+                    <small>
+                        <i class="far fa-clock me-1"></i>
+                        {% if deal.scraped_at %}
+                            Added {{ deal.scraped_at | to_time_ago }}
+                        {% else %}
+                            Recently added
+                        {% endif %}
+                    </small>
+                </div>
                 <div>
                     {% if deal.has_accurate_location %}
                     <a href="https://www.google.com/maps/search/{{ deal.business_name|urlencode }}+{{ deal.location|urlencode }}" target="_blank" class="btn btn-sm btn-success me-1" title="View {{ deal.business_name }} on Google Maps">
@@ -382,6 +403,64 @@
         
         dealTypeRadios.forEach(radio => {
             radio.addEventListener('change', filterDeals);
+        });
+        
+        // Add event listeners for sorting changes - auto-submit form when sort option changes
+        const sortRadios = document.querySelectorAll('input[name="sort"]');
+        sortRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Submit the form when sort option changes
+                document.getElementById('searchFilterForm').submit();
+            });
+        });
+        
+        // Upvote functionality
+        const upvoteButtons = document.querySelectorAll('.upvote-btn');
+        
+        upvoteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const businessName = this.getAttribute('data-business');
+                const voteCountElement = this.querySelector('.vote-count');
+                
+                // Temporarily disable the button to prevent multiple clicks
+                this.disabled = true;
+                
+                // Make API call to upvote
+                fetch('/upvote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest' // Mark as AJAX request
+                    },
+                    body: `business_name=${encodeURIComponent(businessName)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update the vote count
+                        voteCountElement.textContent = data.vote_count;
+                        
+                        // Visual feedback - briefly change button color
+                        this.classList.remove('btn-outline-danger');
+                        this.classList.add('btn-danger');
+                        
+                        // Restore original button style after delay
+                        setTimeout(() => {
+                            this.classList.remove('btn-danger');
+                            this.classList.add('btn-outline-danger');
+                            this.disabled = false;
+                        }, 1000);
+                    } else {
+                        // Show error (could be improved with a toast notification)
+                        console.error('Error upvoting:', data.message);
+                        this.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error upvoting:', error);
+                    this.disabled = false;
+                });
+            });
         });
         
         // Telegram posting functionality

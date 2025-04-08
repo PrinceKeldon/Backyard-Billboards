@@ -70,6 +70,7 @@ def home():
         district = request.args.get('district', '')
         search_query = request.args.get('search', '')
         deal_type = request.args.get('deal_type', '')
+        sort_by = request.args.get('sort', 'date')  # Default sort by date, can be 'votes' for sorting by votes
         
         # Start with Berlin-only deals
         filtered_deals = berlin_deals
@@ -106,6 +107,18 @@ def home():
         # Get all unique districts for the filter dropdown
         districts = sorted(list(set(d.get('district') for d in deals if d.get('district'))))
         
+        # Sort the filtered deals based on the sort parameter
+        if sort_by == 'votes':
+            # Ensure each deal has a votes field (default to 0 if missing)
+            for deal in filtered_deals:
+                if 'votes' not in deal:
+                    deal['votes'] = 0
+            # Sort by votes (highest first)
+            filtered_deals = sorted(filtered_deals, key=lambda x: x.get("votes", 0), reverse=True)
+        else:
+            # Default sort by date (newest first)
+            filtered_deals = sorted(filtered_deals, key=lambda x: x.get("scraped_at", ""), reverse=True)
+        
         # Return the filtered deals with all filter parameters
         return render_template(
             "index.html", 
@@ -113,7 +126,8 @@ def home():
             districts=districts, 
             current_district=district,
             search_query=search_query,
-            deal_type=deal_type
+            deal_type=deal_type,
+            sort_by=sort_by
         )
     except Exception as e:
         logger.error(f"Error retrieving deals: {str(e)}")
@@ -124,7 +138,8 @@ def home():
             districts=[], 
             current_district=None,
             search_query='',
-            deal_type=''
+            deal_type='',
+            sort_by='date'
         )
 
 @app.route("/scrape", methods=["POST"])
@@ -348,6 +363,57 @@ def delete_deal():
         flash(f"Error deleting deal: {str(e)}", "danger")
         return redirect(url_for("home"))
 
+@app.route("/upvote", methods=["POST"])
+def upvote_deal():
+    """Route to upvote a deal"""
+    try:
+        business_name = request.form.get("business_name")
+        
+        if not business_name:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"status": "error", "message": "Business name is required"}), 400
+            flash("Business name is required", "warning")
+            return redirect(url_for("home"))
+        
+        result = deal_db.upvote_deal(business_name)
+        
+        if result:
+            # Get the updated vote count
+            vote_count = result.get('votes', 0)
+            
+            # If this was an AJAX request, return JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'status': 'success',
+                    'vote_count': vote_count,
+                    'message': f"Upvoted deal for {business_name}"
+                })
+            
+            # Otherwise return a regular redirect with flash message
+            flash(f"Upvoted deal for {business_name}", "success")
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'status': 'error',
+                    'message': f"Deal not found for {business_name}"
+                }), 404
+                
+            flash(f"Deal not found for {business_name}", "warning")
+            
+    except Exception as e:
+        logger.error(f"Error upvoting deal: {str(e)}")
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'status': 'error',
+                'message': f"Error upvoting deal: {str(e)}"
+            }), 500
+            
+        flash(f"Error upvoting deal: {str(e)}", "danger")
+        
+    # If it wasn't an AJAX request or if there was an error, redirect
+    return redirect(url_for('home'))
+
 @app.route("/clean-dataset", methods=["GET"])
 def clean_dataset():
     """Route to clean the dataset - ensures all locations include Berlin"""
@@ -364,7 +430,7 @@ def clean_dataset():
 @app.errorhandler(404)
 def page_not_found(e):
     """Handle 404 errors"""
-    return render_template("index.html", deals=[], error="Page not found"), 404
+    return render_template("index.html", deals=[], error="Page not found", sort_by='date'), 404
 
 @app.route("/deal/<business_name>")
 def view_deal(business_name):
@@ -416,6 +482,7 @@ def view_deal(business_name):
             current_district=deal_data.get('district', ''),
             search_query=decoded_name,
             deal_type='',
+            sort_by='date',  # Default to date sort when viewing a specific deal
             highlighted_deal=decoded_name,
             **query_params
         )
@@ -427,7 +494,7 @@ def view_deal(business_name):
 @app.errorhandler(500)
 def internal_server_error(e):
     """Handle 500 errors"""
-    return render_template("index.html", deals=[], error="Internal server error"), 500
+    return render_template("index.html", deals=[], error="Internal server error", sort_by='date'), 500
 
 def generate_og_deal_image(business_name, deal_text, location, district=None, rating=None):
     """
