@@ -3,7 +3,7 @@
 /* Color palette variables */
 :root {
     /* Dark mode colors */
-    --bb-primary: #FF6B35;      /* Vibrant orange */
+    --bb-primary: #8B2635;      /* Burgundy */
     --bb-secondary: #2EC4B6;    /* Teal */
     --bb-accent: #F9CB40;       /* Warm yellow */
     --bb-light: #E6EBE0;        /* Off-white */
@@ -20,7 +20,7 @@
     --bs-card-bg: #ffffff;
     --bs-card-color: var(--bb-dark);
     --bs-primary: var(--bb-primary);
-    --bs-primary-rgb: 255, 107, 53;
+    --bs-primary-rgb: 139, 38, 53;
     --bs-secondary: var(--bb-secondary);
     --bs-secondary-rgb: 46, 196, 182;
     --bs-success: #28a745;
@@ -33,7 +33,7 @@
     --bs-secondary-bg: #f0f0f0;
     --bs-navbar-color: var(--bb-dark);
     --bs-link-color: var(--bb-primary);
-    --bs-link-hover-color: #e45525;
+    --bs-link-hover-color: #a93344;
 }
 
 /* Dark mode overrides */
@@ -41,7 +41,7 @@
     --bs-body-bg: var(--bb-dark);
     --bs-body-color: var(--bb-light);
     --bs-primary: var(--bb-primary);
-    --bs-primary-rgb: 255, 107, 53;
+    --bs-primary-rgb: 139, 38, 53;
     --bs-secondary: var(--bb-secondary);
     --bs-secondary-rgb: 46, 196, 182;
     --bs-success: #28a745;
@@ -50,7 +50,7 @@
     --bs-warning-rgb: 249, 203, 64;
     --bs-navbar-color: var(--bb-light);
     --bs-link-color: var(--bb-primary);
-    --bs-link-hover-color: #ff8c61;
+    --bs-link-hover-color: #c44153;
 }
 
 html, body {
@@ -101,10 +101,31 @@ html, body {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
+.deal-card:hover .card-header {
+    background: linear-gradient(to right, #9f2f3f, #b03747);
+}
+
+.deal-card:hover .card-header h5 {
+    transform: translateY(-1px);
+}
+
 .deal-card .card-header {
     background-color: var(--bs-primary);
     color: white;
     border-bottom: none;
+    padding: 0.8rem 1rem;
+    letter-spacing: 0.02em;
+    /* Add a slightly lighter background for contrast with black text */
+    background: linear-gradient(to right, #8f2a38, #9f2f3f);
+}
+
+.deal-card .card-header h5 {
+    color: #000000 !important;
+    font-weight: 800 !important;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    padding: 2px 0;
 }
 
 .deal-card .card-footer {
@@ -147,15 +168,17 @@ html, body {
 .deal-card.highlighted::before {
     content: "Featured";
     position: absolute;
-    top: -12px;
-    right: 10px;
+    top: 8px;
+    right: 8px;
     background-color: var(--bb-accent);
     color: var(--bb-dark);
     padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    border-radius: 10px;
+    font-size: 0.65rem;
     font-weight: 600;
-    z-index: 1;
+    z-index: 5;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .deal-description {
@@ -178,9 +201,9 @@ html, body {
 
 .btn-primary:hover, .btn-primary:focus {
     transform: translateY(-2px);
-    background-color: #e85a24;
-    border-color: #e85a24;
-    box-shadow: 0 4px 8px rgba(255, 107, 53, 0.4);
+    background-color: #a93344;  /* Slightly lighter burgundy */
+    border-color: #a93344;
+    box-shadow: 0 4px 8px rgba(139, 38, 53, 0.4);
 }
 
 /* Secondary button - teal */
