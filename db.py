@@ -67,18 +67,28 @@ class DealDB:
         """
         try:
             deals = []
+            logger.debug(f"DB keys: {list(self.db.keys())}")
+            
             for business_name in self.db.keys():
-                deal_data = self.db[business_name]
-                # Skip if not a deal (in case other data is stored in the DB)
-                if not isinstance(deal_data, dict) or not "deal" in deal_data:
-                    continue
-                
-                # Add business name to the deal data
-                deal_data["business_name"] = business_name
-                deals.append(deal_data)
+                try:
+                    deal_data = self.db[business_name]
+                    logger.debug(f"Deal data for {business_name}: {deal_data}")
+                    
+                    # Skip if not a deal (in case other data is stored in the DB)
+                    if not isinstance(deal_data, dict) or "deal" not in deal_data:
+                        logger.debug(f"Skipping {business_name} as it's not a valid deal")
+                        continue
+                    
+                    # Add business name to the deal data
+                    deal_info = deal_data.copy()  # Create a copy to avoid modifying the original
+                    deal_info["business_name"] = business_name
+                    deals.append(deal_info)
+                except Exception as inner_e:
+                    logger.error(f"Error processing deal {business_name}: {str(inner_e)}")
             
             # Sort deals by scraped_at date (newest first)
             deals.sort(key=lambda x: x.get("scraped_at", ""), reverse=True)
+            logger.debug(f"Returning {len(deals)} deals")
             return deals
         except Exception as e:
             logger.error(f"Error getting all deals: {str(e)}")
