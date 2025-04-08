@@ -16,7 +16,7 @@ class DealDB:
             logger.error(f"Error initializing database: {str(e)}")
             raise
     
-    def add_deal(self, business_name, deal, location):
+    def add_deal(self, business_name, deal, location, district=None, has_accurate_location=False):
         """
         Add a deal to the database
         
@@ -24,16 +24,24 @@ class DealDB:
             business_name (str): Name of the business
             deal (str): Description of the deal
             location (str): Location of the business
+            district (str, optional): District/neighborhood (for Berlin)
+            has_accurate_location (bool, optional): Whether location is accurate for mapping
         """
         try:
             if not business_name or not deal or not location:
                 raise ValueError("All fields are required")
             
-            self.db[business_name] = {
+            deal_data = {
                 "deal": deal,
                 "location": location,
-                "scraped_at": str(datetime.now())
+                "scraped_at": str(datetime.now()),
+                "has_accurate_location": has_accurate_location
             }
+            
+            if district:
+                deal_data["district"] = district
+                
+            self.db[business_name] = deal_data
             logger.debug(f"Added deal for {business_name}")
             return True
         except Exception as e:

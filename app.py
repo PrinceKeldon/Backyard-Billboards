@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import urllib.parse
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from db import DealDB
@@ -18,6 +19,14 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET")
+
+# Add custom Jinja2 filters
+@app.template_filter('urlencode')
+def urlencode_filter(s):
+    """Filter for URL-encoding strings"""
+    if isinstance(s, str):
+        return urllib.parse.quote_plus(s)
+    return ''
 
 # Initialize database
 deal_db = DealDB()
@@ -50,12 +59,23 @@ def scrape_deals():
     """Route to trigger scraping of deals"""
     try:
         rate_limit()
-        location = request.form.get("location", "Austin")
+        location = request.form.get("location", "Berlin")  # Default to Berlin
         scraped_deals = YelpScraper.scrape(location)
         
         # Add each deal to the database
         for deal in scraped_deals:
-            deal_db.add_deal(deal["name"], deal["deal"], deal["location"])
+            # Check if this is a Berlin deal with district info
+            district = deal.get("district")
+            has_accurate_location = deal.get("has_accurate_location", False)
+            
+            # Add to database with all available info
+            deal_db.add_deal(
+                deal["name"], 
+                deal["deal"], 
+                deal["location"],
+                district=district, 
+                has_accurate_location=has_accurate_location
+            )
         
         flash(f"Successfully scraped {len(scraped_deals)} deals!", "success")
     except Exception as e:
@@ -112,12 +132,20 @@ def submit_deal():
             business_name = request.form.get("business_name")
             deal = request.form.get("deal")
             location = request.form.get("location")
+            district = request.form.get("district")
+            has_accurate_location = True if request.form.get("accurate_location") == "on" else False
             
             if not business_name or not deal or not location:
                 flash("All fields are required", "danger")
                 return redirect(url_for("submit_deal"))
             
-            deal_db.add_deal(business_name, deal, location)
+            deal_db.add_deal(
+                business_name, 
+                deal, 
+                location, 
+                district=district,
+                has_accurate_location=has_accurate_location
+            )
             flash("Deal submitted successfully!", "success")
             return redirect(url_for("home"))
         

@@ -12,7 +12,7 @@
     </div>
     <div class="col-md-6 d-flex justify-content-md-end align-items-center">
         <form action="{{ url_for('scrape_deals') }}" method="POST" class="d-flex">
-            <input type="text" name="location" class="form-control me-2" placeholder="City (default: Austin)" aria-label="Location">
+            <input type="text" name="location" class="form-control me-2" placeholder="City (default: Berlin)" aria-label="Location">
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-search me-1"></i> Scrape Deals
             </button>
@@ -74,6 +74,9 @@
                 <p class="card-text">
                     <i class="fas fa-map-marker-alt me-2 text-danger"></i>
                     {{ deal.location }}
+                    {% if deal.district %}
+                    <span class="badge bg-secondary ms-2">{{ deal.district }}</span>
+                    {% endif %}
                 </p>
             </div>
             <div class="card-footer text-muted d-flex justify-content-between align-items-center">
@@ -85,9 +88,16 @@
                         Recently added
                     {% endif %}
                 </small>
-                <button class="btn btn-sm btn-primary post-to-facebook" data-business="{{ deal.business_name }}">
-                    <i class="fab fa-facebook me-1"></i> Share
-                </button>
+                <div>
+                    {% if deal.has_accurate_location %}
+                    <a href="https://www.google.com/maps/search/{{ deal.location|urlencode }}" target="_blank" class="btn btn-sm btn-success me-1">
+                        <i class="fas fa-map me-1"></i> Map
+                    </a>
+                    {% endif %}
+                    <button class="btn btn-sm btn-primary post-to-facebook" data-business="{{ deal.business_name }}">
+                        <i class="fab fa-facebook me-1"></i> Share
+                    </button>
+                </div>
             </div>
         </div>
     </div>
