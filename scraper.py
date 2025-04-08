@@ -69,54 +69,13 @@ class YelpScraper:
             "business_prefixes": ["", "Zum", "Zur", "Berliner"],
             "business_types": ["Eckkneipe", "Bierstube", "Brauhaus", "Kneipe", "Café", "Bar", "Weinbar", "Lokal"],
             "locations": [
+                # Mitte
                 {
                     "name": "Mein Haus am See",
                     "address": "Brunnenstraße 197-198, 10119 Berlin",
                     "district": "Mitte",
                     "drink_deal": "2-für-1 Cocktails von 18-20 Uhr",
                     "food_deal": "Kleine Snacks inklusive"
-                },
-                {
-                    "name": "Prater Biergarten",
-                    "address": "Kastanienallee 7-9, 10435 Berlin",
-                    "district": "Prenzlauer Berg",
-                    "drink_deal": "{currency}3,50 Prater Pils",
-                    "food_deal": "Halber Preis für Brezeln"
-                },
-                {
-                    "name": "Klunkerkranich",
-                    "address": "Karl-Marx-Straße 66, 12043 Berlin",
-                    "district": "Neukölln",
-                    "drink_deal": "{currency}4 Berliner Weiße",
-                    "food_deal": "Happy Hour Pizza {currency}6"
-                },
-                {
-                    "name": "Eschenbräu",
-                    "address": "Triftstraße 67, 13353 Berlin",
-                    "district": "Wedding",
-                    "drink_deal": "{currency}3,20 Hausbier",
-                    "food_deal": "Kostenlose Brezeln zum Bier"
-                },
-                {
-                    "name": "BRLO Brwhouse",
-                    "address": "Schöneberger Straße 16, 10963 Berlin",
-                    "district": "Kreuzberg",
-                    "drink_deal": "Craft Bier Tasting für {currency}10",
-                    "food_deal": "Vegane Snack-Platte für {currency}7"
-                },
-                {
-                    "name": "Monkey Bar",
-                    "address": "Budapester Straße 40, 10787 Berlin",
-                    "district": "Charlottenburg",
-                    "drink_deal": "{currency}6 Signature Cocktails",
-                    "food_deal": "Happy Hour Tapas"
-                },
-                {
-                    "name": "Hopfenreich",
-                    "address": "Sorauer Straße 31, 10997 Berlin",
-                    "district": "Kreuzberg",
-                    "drink_deal": "{currency}4 wechselnde Craft-Biere",
-                    "food_deal": "Kostenlose Erdnüsse"
                 },
                 {
                     "name": "Neue Odessa Bar",
@@ -126,12 +85,131 @@ class YelpScraper:
                     "food_deal": "Gratis Oliven und Nüsse"
                 },
                 {
+                    "name": "Bar Tausend",
+                    "address": "Schiffbauerdamm 11, 10117 Berlin",
+                    "district": "Mitte",
+                    "drink_deal": "{currency}7 Signature Cocktails",
+                    "food_deal": "Asiatische Tapas für {currency}5"
+                },
+                
+                # Prenzlauer Berg
+                {
+                    "name": "Prater Biergarten",
+                    "address": "Kastanienallee 7-9, 10435 Berlin",
+                    "district": "Prenzlauer Berg",
+                    "drink_deal": "{currency}3,50 Prater Pils",
+                    "food_deal": "Halber Preis für Brezeln"
+                },
+                {
+                    "name": "Wohnzimmer Bar",
+                    "address": "Lettestraße 6, 10437 Berlin",
+                    "district": "Prenzlauer Berg",
+                    "drink_deal": "{currency}4 Berliner Weiße mit Schuss",
+                    "food_deal": "Nachos mit Dips für {currency}3,50"
+                },
+                {
+                    "name": "Kulturbrauerei",
+                    "address": "Schönhauser Allee 36, 10435 Berlin",
+                    "district": "Prenzlauer Berg",
+                    "drink_deal": "{currency}3,50 Craft Beer",
+                    "food_deal": "Flammkuchen für {currency}5"
+                },
+                
+                # Neukölln
+                {
+                    "name": "Klunkerkranich",
+                    "address": "Karl-Marx-Straße 66, 12043 Berlin",
+                    "district": "Neukölln",
+                    "drink_deal": "{currency}4 Berliner Weiße",
+                    "food_deal": "Happy Hour Pizza {currency}6"
+                },
+                {
+                    "name": "Tier",
+                    "address": "Weserstraße 42, 12045 Berlin",
+                    "district": "Neukölln",
+                    "drink_deal": "{currency}6 Craft Cocktails",
+                    "food_deal": "Vegane Tacos {currency}3 pro Stück"
+                },
+                {
+                    "name": "Rixdorf Biergarten",
+                    "address": "Richardplatz 14, 12055 Berlin",
+                    "district": "Neukölln",
+                    "drink_deal": "{currency}3 Alster",
+                    "food_deal": "Currywurst für {currency}4"
+                },
+                
+                # Wedding
+                {
+                    "name": "Eschenbräu",
+                    "address": "Triftstraße 67, 13353 Berlin",
+                    "district": "Wedding",
+                    "drink_deal": "{currency}3,20 Hausbier",
+                    "food_deal": "Kostenlose Brezeln zum Bier"
+                },
+                {
+                    "name": "Cafe Pförtner",
+                    "address": "Uferstraße 8-11, 13357 Berlin",
+                    "district": "Wedding",
+                    "drink_deal": "{currency}3,50 Weinschorle",
+                    "food_deal": "Häppchen vom Buffet für {currency}5"
+                },
+                
+                # Kreuzberg
+                {
+                    "name": "BRLO Brwhouse",
+                    "address": "Schöneberger Straße 16, 10963 Berlin",
+                    "district": "Kreuzberg",
+                    "drink_deal": "Craft Bier Tasting für {currency}10",
+                    "food_deal": "Vegane Snack-Platte für {currency}7"
+                },
+                {
+                    "name": "Hopfenreich",
+                    "address": "Sorauer Straße 31, 10997 Berlin",
+                    "district": "Kreuzberg",
+                    "drink_deal": "{currency}4 wechselnde Craft-Biere",
+                    "food_deal": "Kostenlose Erdnüsse"
+                },
+                {
+                    "name": "Barkett",
+                    "address": "Graefestraße 71, 10967 Berlin",
+                    "district": "Kreuzberg",
+                    "drink_deal": "{currency}5 Aperol Spritz",
+                    "food_deal": "Hummus mit Brot für {currency}3"
+                },
+                
+                # Charlottenburg
+                {
+                    "name": "Monkey Bar",
+                    "address": "Budapester Straße 40, 10787 Berlin",
+                    "district": "Charlottenburg",
+                    "drink_deal": "{currency}6 Signature Cocktails",
+                    "food_deal": "Happy Hour Tapas"
+                },
+                {
+                    "name": "Bellboy Bar",
+                    "address": "Kurfürstendamm 101, 10711 Berlin",
+                    "district": "Charlottenburg",
+                    "drink_deal": "{currency}8 Cocktails",
+                    "food_deal": "Snacks zur Happy Hour"
+                },
+                
+                # Schöneberg
+                {
                     "name": "Zur Traube",
                     "address": "Regensburger Straße 15, 10777 Berlin",
                     "district": "Schöneberg",
                     "drink_deal": "{currency}2,80 Berliner Pilsner",
                     "food_deal": "Currywurst für {currency}4,50"
                 },
+                {
+                    "name": "Green Door",
+                    "address": "Winterfeldtstraße 50, 10781 Berlin",
+                    "district": "Schöneberg",
+                    "drink_deal": "{currency}7 Cocktail des Tages",
+                    "food_deal": "Oliven & Käse gratis"
+                },
+                
+                # Friedrichshain
                 {
                     "name": "Protokoll",
                     "address": "Boxhagener Straße 105, 10245 Berlin",
@@ -147,11 +225,79 @@ class YelpScraper:
                     "food_deal": "Käseplatte {currency}7"
                 },
                 {
-                    "name": "Tier",
-                    "address": "Weserstraße 42, 12045 Berlin",
-                    "district": "Neukölln",
-                    "drink_deal": "{currency}6 Craft Cocktails",
-                    "food_deal": "Vegane Tacos {currency}3 pro Stück"
+                    "name": "Boxhagener Hof",
+                    "address": "Boxhagener Straße 117, 10245 Berlin",
+                    "district": "Friedrichshain",
+                    "drink_deal": "{currency}3 Berliner Kindl",
+                    "food_deal": "Schnitzelsandwich für {currency}4,50"
+                },
+                
+                # Moabit
+                {
+                    "name": "Arminius Markthalle",
+                    "address": "Arminiusstraße 2-4, 10551 Berlin",
+                    "district": "Moabit",
+                    "drink_deal": "{currency}3,50 Craft Beer vom Fass",
+                    "food_deal": "Marktplatte für {currency}7"
+                },
+                {
+                    "name": "Kallasch & Moabit",
+                    "address": "Waldstraße 86, 10551 Berlin", 
+                    "district": "Moabit",
+                    "drink_deal": "{currency}3 Sternburger Bier",
+                    "food_deal": "Pretzels für {currency}1,50"
+                },
+                
+                # Tiergarten
+                {
+                    "name": "Café am Neuen See",
+                    "address": "Lichtensteinallee 2, 10787 Berlin",
+                    "district": "Tiergarten",
+                    "drink_deal": "Maßkrug Bier für {currency}7",
+                    "food_deal": "Flammkuchen zum halben Preis"
+                },
+                {
+                    "name": "Berlin Pavillon",
+                    "address": "Straße des 17. Juni 145, 10623 Berlin",
+                    "district": "Tiergarten",
+                    "drink_deal": "{currency}4,20 Prosecco",
+                    "food_deal": "Antipasti-Platte für {currency}9"
+                },
+                
+                # Lichtenberg
+                {
+                    "name": "Schlossgarten Biergarten",
+                    "address": "Magdalenenstraße 77, 10365 Berlin",
+                    "district": "Lichtenberg",
+                    "drink_deal": "{currency}3 Biere und {currency}4 Longdrinks",
+                    "food_deal": "Currywurst mit Pommes für {currency}5"
+                },
+                
+                # Köpenick
+                {
+                    "name": "Hafenbar Köpenick",
+                    "address": "Grünauer Straße 10, 12557 Berlin",
+                    "district": "Köpenick",
+                    "drink_deal": "{currency}3,20 Köpenicker Hell",
+                    "food_deal": "Fischbrötchen für {currency}3,50"
+                },
+                
+                # Spandau
+                {
+                    "name": "Brauhaus Spandau",
+                    "address": "Neuendorfer Straße 1, 13585 Berlin",
+                    "district": "Spandau",
+                    "drink_deal": "{currency}3,50 Hausgebrautes",
+                    "food_deal": "Spanferkel-Brötchen für {currency}4,50"
+                },
+                
+                # Steglitz
+                {
+                    "name": "Schloßkeller Steglitz",
+                    "address": "Schloßstraße 48, 12165 Berlin",
+                    "district": "Steglitz",
+                    "drink_deal": "2-für-1 Weine",
+                    "food_deal": "Käse-Tapas für {currency}5"
                 }
             ]
         },

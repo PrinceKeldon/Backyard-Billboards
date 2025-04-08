@@ -48,11 +48,21 @@ def home():
     """Home page route - displays all deals"""
     try:
         deals = deal_db.get_all_deals()
-        return render_template("index.html", deals=deals)
+        
+        # Get district filter if specified
+        district = request.args.get('district')
+        if district:
+            # Filter deals by district
+            deals = [d for d in deals if d.get('district') and d.get('district').lower() == district.lower()]
+        
+        # Get all unique districts for the filter dropdown
+        districts = sorted(list(set(d.get('district') for d in deal_db.get_all_deals() if d.get('district'))))
+        
+        return render_template("index.html", deals=deals, districts=districts, current_district=district)
     except Exception as e:
         logger.error(f"Error retrieving deals: {str(e)}")
         flash(f"Error retrieving deals: {str(e)}", "danger")
-        return render_template("index.html", deals=[])
+        return render_template("index.html", deals=[], districts=[], current_district=None)
 
 @app.route("/scrape", methods=["POST"])
 def scrape_deals():
@@ -154,7 +164,29 @@ def submit_deal():
             flash(f"Error submitting deal: {str(e)}", "danger")
             return redirect(url_for("submit_deal"))
     
-    return render_template("submit.html")
+    # Get all Berlin districts for the dropdown
+    berlin_districts = [
+        "Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg", 
+        "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten",
+        "Lichtenberg", "Köpenick", "Spandau", "Steglitz", "Marzahn", "Wilmersdorf",
+        "Tempelhof", "Treptow", "Pankow", "Reinickendorf", "Zehlendorf"
+    ]
+    berlin_districts.sort()
+    
+    # Get existing districts from database to append to the list
+    existing_districts = []
+    try:
+        deals = deal_db.get_all_deals()
+        existing_districts = set(d.get('district') for d in deals if d.get('district'))
+        # Add any missing districts to the list
+        for district in existing_districts:
+            if district and district not in berlin_districts:
+                berlin_districts.append(district)
+        berlin_districts.sort()
+    except Exception as e:
+        logger.error(f"Error retrieving districts: {str(e)}")
+    
+    return render_template("submit.html", districts=berlin_districts)
 
 @app.route("/delete", methods=["POST"])
 def delete_deal():

@@ -4,13 +4,31 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-md-4">
         <h1 class="mb-4">
             <i class="fas fa-glass-martini-alt me-2"></i>
             Happy Hour Deals
         </h1>
     </div>
-    <div class="col-md-6 d-flex justify-content-md-end align-items-center">
+    <div class="col-md-4">
+        <!-- District filter dropdown -->
+        {% if districts %}
+        <form action="{{ url_for('home') }}" method="GET" class="d-flex align-items-center h-100">
+            <div class="input-group">
+                <label class="input-group-text" for="districtFilter">
+                    <i class="fas fa-map-marker-alt"></i>
+                </label>
+                <select class="form-select" id="districtFilter" name="district" onchange="this.form.submit()">
+                    <option value="" {% if not current_district %}selected{% endif %}>All Districts</option>
+                    {% for district in districts %}
+                    <option value="{{ district }}" {% if current_district == district %}selected{% endif %}>{{ district }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+    <div class="col-md-4 d-flex justify-content-md-end align-items-center">
         <form action="{{ url_for('scrape_deals') }}" method="POST" class="d-flex">
             <input type="text" name="location" class="form-control me-2" placeholder="City (default: Berlin)" aria-label="Location">
             <button type="submit" class="btn btn-primary">
