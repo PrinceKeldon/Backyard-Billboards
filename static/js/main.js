@@ -10,6 +10,77 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
     
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const themeText = document.getElementById('theme-text');
+    const htmlElement = document.documentElement;
+    
+    // Check for saved theme preference or use default (dark)
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+    
+    // Toggle theme when button is clicked
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = htmlElement.getAttribute('data-bs-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+    
+    // Set theme to either light or dark
+    function setTheme(theme) {
+        htmlElement.setAttribute('data-bs-theme', theme);
+        const footer = document.getElementById('main-footer');
+        const navbar = document.getElementById('main-navbar');
+        
+        // Apply smooth transitions
+        document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+        
+        if (theme === 'dark') {
+            themeIcon.classList.remove('fa-sun');
+            themeIcon.classList.add('fa-moon');
+            themeText.textContent = 'Light Mode';
+            
+            // Dark theme always requires navbar-dark for proper contrast
+            navbar.classList.add('navbar-dark');
+            navbar.classList.remove('navbar-light');
+            
+            // The gradient background is handled by CSS, so we don't need to toggle bg-dark/light
+            // We just need to make sure we're using the right text contrast classes
+        } else {
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+            themeText.textContent = 'Dark Mode';
+            
+            // Light theme might look better with dark text on our gradient navbar
+            navbar.classList.remove('navbar-dark');
+            navbar.classList.add('navbar-light');
+        }
+        
+        // Add a nice animation effect
+        document.body.classList.add('theme-transition');
+        setTimeout(() => {
+            document.body.classList.remove('theme-transition');
+        }, 500);
+        
+        // Update button styles based on theme
+        updateButtonStyles(theme);
+    }
+    
+    // Update button styles based on theme
+    function updateButtonStyles(theme) {
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        if (theme === 'dark') {
+            themeToggle.classList.remove('btn-dark');
+            themeToggle.classList.add('btn-outline-light');
+        } else {
+            themeToggle.classList.remove('btn-outline-light');
+            themeToggle.classList.add('btn-outline-primary');
+        }
+    }
+    
     // Format dates using time ago
     function timeAgo(dateString) {
         const date = new Date(dateString);

@@ -1,10 +1,99 @@
 /* Custom styles for Backyard Billboards */
 
+/* Color palette variables */
+:root {
+    /* Dark mode colors */
+    --bb-primary: #FF6B35;      /* Vibrant orange */
+    --bb-secondary: #2EC4B6;    /* Teal */
+    --bb-accent: #F9CB40;       /* Warm yellow */
+    --bb-light: #E6EBE0;        /* Off-white */
+    --bb-dark: #252525;         /* Dark gray */
+    
+    /* Transitions */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light mode overrides */
+[data-bs-theme="light"] {
+    --bs-body-bg: var(--bb-light);
+    --bs-body-color: var(--bb-dark);
+    --bs-card-bg: #ffffff;
+    --bs-card-color: var(--bb-dark);
+    --bs-primary: var(--bb-primary);
+    --bs-primary-rgb: 255, 107, 53;
+    --bs-secondary: var(--bb-secondary);
+    --bs-secondary-rgb: 46, 196, 182;
+    --bs-success: #28a745;
+    --bs-info: var(--bb-secondary);
+    --bs-warning: var(--bb-accent);
+    --bs-warning-rgb: 249, 203, 64;
+    --bs-danger: #dc3545;
+    --bs-light: #f8f9fa;
+    --bs-dark: var(--bb-dark);
+    --bs-secondary-bg: #f0f0f0;
+    --bs-navbar-color: var(--bb-dark);
+    --bs-link-color: var(--bb-primary);
+    --bs-link-hover-color: #e45525;
+}
+
+/* Dark mode overrides */
+[data-bs-theme="dark"] {
+    --bs-body-bg: var(--bb-dark);
+    --bs-body-color: var(--bb-light);
+    --bs-primary: var(--bb-primary);
+    --bs-primary-rgb: 255, 107, 53;
+    --bs-secondary: var(--bb-secondary);
+    --bs-secondary-rgb: 46, 196, 182;
+    --bs-success: #28a745;
+    --bs-info: var(--bb-secondary);
+    --bs-warning: var(--bb-accent);
+    --bs-warning-rgb: 249, 203, 64;
+    --bs-navbar-color: var(--bb-light);
+    --bs-link-color: var(--bb-primary);
+    --bs-link-hover-color: #ff8c61;
+}
+
+html, body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme transition animation class */
+.theme-transition {
+    animation: theme-fade 0.5s ease;
+}
+
+@keyframes theme-fade {
+    0% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Theme toggle button styling */
+#theme-toggle {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 20px;
+    padding: 5px 15px;
+    background-color: transparent;
+    border: 1px solid var(--bb-primary);
+    color: var(--bb-primary);
+}
+
+#theme-toggle:hover {
+    background-color: var(--bb-primary);
+    color: white;
+}
+
 /* Deal card styles */
 .deal-card {
     transition: transform 0.2s, box-shadow 0.2s;
     border: none;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 .deal-card:hover {
@@ -12,23 +101,139 @@
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
+.deal-card .card-header {
+    background-color: var(--bs-primary);
+    color: white;
+    border-bottom: none;
+}
+
+.deal-card .card-footer {
+    background-color: transparent;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="light"] .deal-card {
+    background-color: white;
+}
+
+[data-bs-theme="light"] .deal-card .card-header {
+    color: white;
+}
+
+[data-bs-theme="light"] .deal-card .card-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Icons in cards */
+.deal-card .fa-tag {
+    color: var(--bb-secondary) !important;
+}
+
+.deal-card .fa-map-marker-alt {
+    color: var(--bb-primary) !important;
+}
+
+.deal-card .fa-star {
+    color: var(--bb-accent) !important;
+}
+
+/* Highlighted deal styling */
+.deal-card.highlighted {
+    transform: translateY(-5px);
+    box-shadow: 0 0 0 3px var(--bs-primary), 0 8px 16px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.deal-card.highlighted::before {
+    content: "Featured";
+    position: absolute;
+    top: -12px;
+    right: 10px;
+    background-color: var(--bb-accent);
+    color: var(--bb-dark);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 1;
+}
+
 .deal-description {
     font-weight: 500;
 }
 
-/* Button hover effects */
-.btn-primary {
+/* Button styles */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 0.375rem 1rem;
     transition: all 0.3s;
 }
 
-.btn-primary:hover {
+/* Primary button - orange */
+.btn-primary {
+    background-color: var(--bb-primary);
+    border-color: var(--bb-primary);
+}
+
+.btn-primary:hover, .btn-primary:focus {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.25);
+    background-color: #e85a24;
+    border-color: #e85a24;
+    box-shadow: 0 4px 8px rgba(255, 107, 53, 0.4);
+}
+
+/* Secondary button - teal */
+.btn-secondary {
+    background-color: var(--bb-secondary);
+    border-color: var(--bb-secondary);
+}
+
+.btn-secondary:hover, .btn-secondary:focus {
+    background-color: #25b3a6;
+    border-color: #25b3a6;
+    box-shadow: 0 4px 8px rgba(46, 196, 182, 0.4);
+}
+
+/* Success button - keep green */
+.btn-success:hover, .btn-success:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+}
+
+/* Outline buttons */
+.btn-outline-primary {
+    color: var(--bb-primary);
+    border-color: var(--bb-primary);
+}
+
+.btn-outline-primary:hover, .btn-outline-primary:focus {
+    background-color: var(--bb-primary);
+    border-color: var(--bb-primary);
+    color: white;
+}
+
+.btn-outline-secondary {
+    color: var(--bb-secondary);
+    border-color: var(--bb-secondary);
+}
+
+.btn-outline-secondary:hover, .btn-outline-secondary:focus {
+    background-color: var(--bb-secondary);
+    border-color: var(--bb-secondary);
+    color: white;
 }
 
 /* Custom navbar styles */
 .navbar {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(to right, var(--bb-primary), var(--bb-secondary)) !important;
+}
+
+.navbar-dark .navbar-brand, 
+.navbar-dark .navbar-nav .nav-link, 
+.navbar-dark .navbar-text {
+    color: white !important;
 }
 
 .navbar-brand {
@@ -36,9 +241,52 @@
     letter-spacing: 0.5px;
 }
 
+.navbar-dark .navbar-nav .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+}
+
 /* Footer styles */
 .footer {
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(to right, var(--bb-secondary), var(--bb-primary)) !important;
+    color: white !important;
+    padding: 1.5rem 0;
+}
+
+.footer .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Badge styling */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    border-radius: 10px;
+}
+
+.badge.bg-secondary {
+    background-color: var(--bb-secondary) !important;
+    color: white;
+}
+
+/* Add some pleasant spacing */
+.container {
+    padding: 1.5rem 15px;
+}
+
+/* Add colorful accents */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--bb-primary);
+}
+
+[data-bs-theme="light"] h1, 
+[data-bs-theme="light"] h2, 
+[data-bs-theme="light"] h3, 
+[data-bs-theme="light"] h4, 
+[data-bs-theme="light"] h5, 
+[data-bs-theme="light"] h6 {
+    color: var(--bb-primary);
 }
 
 /* Modal animation */

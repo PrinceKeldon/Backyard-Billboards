@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Backyard Billboards{% endblock %}</title>
     
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="{% block og_title %}Backyard Billboards - Happy Hour Deals in Berlin{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Discover the best happy hour deals in Berlin. Save money on drinks and food at your favorite local spots.{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='img/og-default.jpg', _external=True) }}{% endblock %}">
+    <meta property="og:site_name" content="Backyard Billboards">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}Backyard Billboards - Happy Hour Deals in Berlin{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Discover the best happy hour deals in Berlin. Save money on drinks and food at your favorite local spots.{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ url_for('static', filename='img/og-default.jpg', _external=True) }}{% endblock %}">
+    
     <!-- Bootstrap CSS from Replit theme -->
     <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
     
@@ -18,7 +32,7 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" id="main-navbar">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('home') }}">
                 <i class="fas fa-cocktail me-2"></i>
@@ -38,6 +52,11 @@
                         <a class="nav-link {% if request.path == '/submit' %}active{% endif %}" href="{{ url_for('submit_deal') }}">
                             <i class="fas fa-plus-circle me-1"></i> Submit Deal
                         </a>
+                    </li>
+                    <li class="nav-item">
+                        <button id="theme-toggle" class="btn nav-link">
+                            <i class="fas fa-moon me-1" id="theme-icon"></i> <span id="theme-text">Light Mode</span>
+                        </button>
                     </li>
                 </ul>
             </div>
@@ -64,7 +83,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer mt-auto py-3 bg-dark">
+    <footer class="footer mt-auto py-3 bg-dark" id="main-footer">
         <div class="container text-center">
             <span class="text-muted">
                 <i class="fas fa-glass-cheers me-1"></i> Backyard Billboards &copy; 2025

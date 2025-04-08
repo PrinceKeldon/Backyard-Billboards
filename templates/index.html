@@ -1,6 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}Backyard Billboards - Happy Hour Deals{% endblock %}
+{% block title %}{% if request.args.get('deal') %}{{ request.args.get('deal') }} - Happy Hour at {{ request.args.get('business') }}{% else %}Backyard Billboards - Happy Hour Deals{% endif %}{% endblock %}
+
+{% block og_title %}{% if request.args.get('deal') %}{{ request.args.get('business') }} - {{ request.args.get('deal') }}{% else %}Backyard Billboards - Happy Hour Deals in Berlin{% endif %}{% endblock %}
+
+{% block og_description %}{% if request.args.get('deal') %}{{ request.args.get('deal') }} at {{ request.args.get('business') }} in {{ request.args.get('location', 'Berlin') }}{% else %}Discover the best happy hour deals in Berlin. Save money on drinks and food at your favorite local spots.{% endif %}{% endblock %}
+
+{% block og_image %}{% if request.args.get('business') %}{{ url_for('og_image', business_name=request.args.get('business'), _external=True) }}{% else %}{{ url_for('static', filename='img/og-default.jpg', _external=True) }}{% endif %}{% endblock %}
+
+{% block twitter_title %}{{ self.og_title() }}{% endblock %}
+{% block twitter_description %}{{ self.og_description() }}{% endblock %}
+{% block twitter_image %}{{ self.og_image() }}{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -122,7 +132,7 @@
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for deal in deals %}
     <div class="col">
-        <div class="card h-100 deal-card">
+        <div class="card h-100 deal-card {% if highlighted_deal and highlighted_deal == deal.business_name %}highlighted{% endif %}">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 text-truncate" title="{{ deal.business_name }}">
                     <i class="fas fa-store me-2"></i>
@@ -210,13 +220,40 @@
                 </small>
                 <div>
                     {% if deal.has_accurate_location %}
-                    <a href="https://www.google.com/maps/search/{{ deal.location|urlencode }}" target="_blank" class="btn btn-sm btn-success me-1">
+                    <a href="https://www.google.com/maps/search/{{ deal.location|urlencode }}" target="_blank" class="btn btn-sm btn-success me-1" title="View on Google Maps">
                         <i class="fas fa-map me-1"></i> Map
                     </a>
                     {% endif %}
-                    <button class="btn btn-sm btn-primary post-to-telegram" data-business="{{ deal.business_name }}">
-                        <i class="fab fa-telegram me-1"></i> Share
-                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary post-to-telegram" data-business="{{ deal.business_name }}" title="Share on Telegram">
+                            <i class="fab fa-telegram me-1"></i> Share
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('view_deal', business_name=deal.business_name) }}" title="View Deal Page">
+                                    <i class="fas fa-eye me-2"></i> View Deal Page
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="https://twitter.com/intent/tweet?url={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}&text=Check out this deal at {{ deal.business_name }}!" target="_blank" title="Share on Twitter">
+                                    <i class="fab fa-twitter me-2"></i> Share on Twitter
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}" target="_blank" title="Share on Facebook">
+                                    <i class="fab fa-facebook me-2"></i> Share on Facebook
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="mailto:?subject=Check out this happy hour deal&body=I found this great deal at {{ deal.business_name }}:%0A%0A{{ deal.deal }}%0A%0ALocation: {{ deal.location }}%0A%0ACheck it out here: {{ url_for('view_deal', business_name=deal.business_name, _external=True) }}" title="Share via Email">
+                                    <i class="fas fa-envelope me-2"></i> Share via Email
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

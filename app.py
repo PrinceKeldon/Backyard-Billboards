@@ -3,12 +3,14 @@ import logging
 import time
 import urllib.parse
 import asyncio
+import io
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
 from db import DealDB
 from scraper import YelpScraper
 from telegram import Bot
 from dotenv import load_dotenv
+from PIL import Image, ImageDraw, ImageFont
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -364,7 +366,277 @@ def page_not_found(e):
     """Handle 404 errors"""
     return render_template("index.html", deals=[], error="Page not found"), 404
 
+@app.route("/deal/<business_name>")
+def view_deal(business_name):
+    """Route to view a specific deal - optimized for social media sharing"""
+    try:
+        # Decode the business name (it will be URL-encoded)
+        decoded_name = urllib.parse.unquote_plus(business_name)
+        
+        # Get the deal data
+        deal_data = deal_db.get_deal(decoded_name)
+        
+        if not deal_data:
+            flash("Deal not found", "danger")
+            return redirect(url_for("home"))
+            
+        # Get all deals for display on the same page
+        all_deals = []
+        try:
+            all_deals = deal_db.get_all_deals()
+            
+            # Clean the dataset - filter out non-Berlin locations
+            berlin_deals = []
+            for deal in all_deals:
+                location = deal.get('location', '').lower()
+                if 'berlin' in location or deal.get('district'):
+                    berlin_deals.append(deal)
+            all_deals = berlin_deals
+        except Exception as e:
+            logger.error(f"Error getting all deals: {str(e)}")
+        
+        # Get all unique districts for the filter dropdown
+        districts = sorted(list(set(d.get('district') for d in all_deals if d.get('district'))))
+        
+        # Add necessary query parameters for social media preview
+        query_params = {
+            'business': decoded_name,
+            'deal': deal_data.get('deal', 'Happy Hour Deal'),
+            'location': deal_data.get('location', 'Berlin')
+        }
+        
+        if deal_data.get('district'):
+            query_params['district'] = deal_data.get('district')
+        
+        # Return the template with the specific deal highlighted
+        return render_template(
+            "index.html", 
+            deals=all_deals,
+            districts=districts,
+            current_district=deal_data.get('district', ''),
+            search_query=decoded_name,
+            deal_type='',
+            highlighted_deal=decoded_name,
+            **query_params
+        )
+    except Exception as e:
+        logger.error(f"Error viewing deal: {str(e)}")
+        flash(f"Error viewing deal: {str(e)}", "danger")
+        return redirect(url_for("home"))
+
 @app.errorhandler(500)
 def internal_server_error(e):
     """Handle 500 errors"""
     return render_template("index.html", deals=[], error="Internal server error"), 500
+
+def generate_og_deal_image(business_name, deal_text, location, district=None, rating=None):
+    """
+    Generate a dynamic Open Graph image for a specific deal
+    
+    Args:
+        business_name (str): Name of the business
+        deal_text (str): The deal description
+        location (str): Location of the business
+        district (str, optional): Berlin district
+        rating (float, optional): Google Maps rating
+        
+    Returns:
+        bytes: Image data in bytes
+    """
+    try:
+        # Create a 1200x630 image (standard OG image size)
+        width, height = 1200, 630
+        img = Image.new('RGB', (width, height), color=(33, 37, 41))  # Dark background
+        
+        # Draw on the image
+        draw = ImageDraw.Draw(img)
+        
+        # Try to load fonts, fallback to default if not available
+        try:
+            title_font = ImageFont.truetype("Arial.ttf", 50)
+            deal_font = ImageFont.truetype("Arial.ttf", 40)
+            location_font = ImageFont.truetype("Arial.ttf", 30)
+            subtitle_font = ImageFont.truetype("Arial.ttf", 24)
+        except IOError:
+            # Fallback to default font
+            title_font = ImageFont.load_default()
+            deal_font = ImageFont.load_default()
+            location_font = ImageFont.load_default()
+            subtitle_font = ImageFont.load_default()
+        
+        # Background styling - add a gradient effect
+        for y in range(height):
+            # Create a gradient from dark to slightly lighter
+            r = int(33 + (y / height) * 20)
+            g = int(37 + (y / height) * 20)
+            b = int(41 + (y / height) * 20)
+            draw.line([(0, y), (width, y)], fill=(r, g, b), width=1)
+        
+        # Add a header bar
+        header_height = 100
+        draw.rectangle(
+            (0, 0, width, header_height),
+            fill=(220, 53, 69)  # Bootstrap danger red
+        )
+        
+        # Draw logo text in header
+        logo_text = "BACKYARD BILLBOARDS"
+        logo_width = draw.textlength(logo_text, font=subtitle_font)
+        logo_position = ((width - logo_width) // 2, 40)
+        draw.text(
+            logo_position,
+            logo_text,
+            font=subtitle_font,
+            fill=(255, 255, 255)  # White text
+        )
+        
+        # Draw business name - truncate if too long
+        if len(business_name) > 30:
+            business_name = business_name[:27] + "..."
+        
+        business_width = draw.textlength(business_name, font=title_font)
+        business_position = ((width - business_width) // 2, 150)
+        draw.text(
+            business_position,
+            business_name,
+            font=title_font,
+            fill=(248, 249, 250)  # Light text
+        )
+        
+        # Format and draw deal text - wrap if needed
+        max_chars_per_line = 40
+        formatted_deal = []
+        words = deal_text.split()
+        current_line = []
+        
+        for word in words:
+            if len(' '.join(current_line + [word])) <= max_chars_per_line:
+                current_line.append(word)
+            else:
+                formatted_deal.append(' '.join(current_line))
+                current_line = [word]
+        
+        if current_line:
+            formatted_deal.append(' '.join(current_line))
+        
+        # Limit to 3 lines maximum
+        if len(formatted_deal) > 3:
+            formatted_deal = formatted_deal[:2]
+            formatted_deal.append(formatted_deal[-1] + "...")
+        
+        # Draw the deal text
+        deal_y = 240
+        for line in formatted_deal:
+            line_width = draw.textlength(line, font=deal_font)
+            line_position = ((width - line_width) // 2, deal_y)
+            draw.text(
+                line_position,
+                line,
+                font=deal_font,
+                fill=(248, 249, 250)  # Light text
+            )
+            deal_y += 50
+        
+        # Draw location
+        location_text = location
+        if district:
+            location_text += f" - {district}"
+            
+        location_width = draw.textlength(location_text, font=location_font)
+        location_position = ((width - location_width) // 2, 400)
+        draw.text(
+            location_position,
+            location_text,
+            font=location_font,
+            fill=(248, 249, 250)  # Light gray text
+        )
+        
+        # Draw rating if available
+        if rating:
+            rating_text = f"Rating: {rating} "
+            rating_text += "★" * int(rating)
+            
+            rating_width = draw.textlength(rating_text, font=subtitle_font)
+            rating_position = ((width - rating_width) // 2, 470)
+            draw.text(
+                rating_position,
+                rating_text,
+                font=subtitle_font,
+                fill=(255, 193, 7)  # Yellow text for stars
+            )
+        
+        # Add website URL at the bottom
+        site_text = "www.backyardbillboards.com"
+        site_width = draw.textlength(site_text, font=subtitle_font)
+        site_position = ((width - site_width) // 2, height - 50)
+        draw.text(
+            site_position,
+            site_text,
+            font=subtitle_font,
+            fill=(173, 181, 189)  # Gray text
+        )
+        
+        # Convert the image to bytes
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='JPEG')
+        img_byte_arr.seek(0)
+        
+        return img_byte_arr.getvalue()
+    
+    except Exception as e:
+        logger.error(f"Error generating OG deal image: {str(e)}")
+        # Return default image path if there's an error
+        with open("static/img/og-default.jpg", "rb") as f:
+            return f.read()
+
+@app.route('/og-image/<business_name>')
+def og_image(business_name):
+    """
+    Route to generate and serve a dynamic Open Graph image for a specific deal
+    
+    Args:
+        business_name (str): Name of the business
+        
+    Returns:
+        Response: Image response
+    """
+    try:
+        # Decode the business name (it will be URL-encoded)
+        decoded_name = urllib.parse.unquote_plus(business_name)
+        
+        # Get the deal data
+        deal_data = deal_db.get_deal(decoded_name)
+        
+        if not deal_data:
+            # Return default image if deal not found
+            with open("static/img/og-default.jpg", "rb") as f:
+                return send_file(
+                    io.BytesIO(f.read()),
+                    mimetype='image/jpeg'
+                )
+        
+        # Generate an image for this specific deal
+        img_data = generate_og_deal_image(
+            decoded_name,
+            deal_data.get('deal', 'Happy Hour Deal'),
+            deal_data.get('location', 'Berlin'),
+            district=deal_data.get('district'),
+            rating=deal_data.get('rating')
+        )
+        
+        # Return the image
+        response = make_response(send_file(
+            io.BytesIO(img_data),
+            mimetype='image/jpeg'
+        ))
+        response.headers['Cache-Control'] = 'public, max-age=86400'  # Cache for 24 hours
+        return response
+    
+    except Exception as e:
+        logger.error(f"Error generating OG image for {business_name}: {str(e)}")
+        # Return default image on error
+        with open("static/img/og-default.jpg", "rb") as f:
+            return send_file(
+                io.BytesIO(f.read()),
+                mimetype='image/jpeg'
+            )
