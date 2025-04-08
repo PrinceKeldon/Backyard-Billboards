@@ -4,13 +4,17 @@ import time
 import urllib.parse
 import asyncio
 import io
+import random
+import base64
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
 from db import DealDB
 from scraper import YelpScraper
+from google_maps_scraper import GoogleMapsScraper
 from telegram import Bot
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
+import trafilatura
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -25,7 +29,15 @@ os.environ["GOOGLE_MAPS_ENRICHMENT_LIMIT"] = "2"    # Limit to 2 deals per reque
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET")
+app.secret_key = os.environ.get("SESSION_SECRET", "backyard-billboards-local-dev-secret-key")
+
+# Ensure the app is accessible for testing tools
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 # Add custom Jinja2 filters
 @app.template_filter('urlencode')
@@ -434,7 +446,7 @@ def page_not_found(e):
 
 @app.route("/deal/<business_name>")
 def view_deal(business_name):
-    """Route to view a specific deal - optimized for social media sharing"""
+    """Route to view a specific deal - with detailed information and custom image generation"""
     try:
         # Decode the business name (it will be URL-encoded)
         decoded_name = urllib.parse.unquote_plus(business_name)
@@ -445,9 +457,80 @@ def view_deal(business_name):
         if not deal_data:
             flash("Deal not found", "danger")
             return redirect(url_for("home"))
-            
-        # Get all deals for display on the same page
-        all_deals = []
+        
+        # Initialize variables for additional venue details
+        venue_description = None
+        venue_image = None
+        venue_hours = None
+        similar_deals = []
+        
+        # Get venue description and additional details using trafilatura
+        business_place_data = None
+        if deal_data.get('google_maps_url'):
+            # Get more detailed information from Google Maps using trafilatura
+            try:
+                time.sleep(0.5)  # Wait a bit to avoid rate limiting
+                downloaded = trafilatura.fetch_url(deal_data.get('google_maps_url'))
+                if downloaded:
+                    # Extract the main text content
+                    full_text = trafilatura.extract(downloaded, include_comments=False, include_tables=True, no_fallback=False)
+                    if full_text:
+                        # Process the text to create a description
+                        lines = full_text.split('\n')
+                        relevant_lines = []
+                        hours_data = {}
+                        
+                        # Parse text content to get meaningful description and hours
+                        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                        
+                        for line in lines:
+                            line = line.strip()
+                            if not line:
+                                continue
+                                
+                            # Skip very short lines - they're likely UI elements
+                            if len(line) < 5:
+                                continue
+                                
+                            # Try to identify hours
+                            for day in days:
+                                if line.startswith(day) and ':' in line:
+                                    parts = line.split(':', 1)
+                                    if len(parts) == 2:
+                                        hours_data[parts[0].strip()] = parts[1].strip()
+                                    continue
+                            
+                            # Skip lines with common Google Maps UI text
+                            skip_phrases = ['directions', 'save', 'nearby', 'phone', 'suggest', 'street view', 
+                                          'write a review', 'reviews', 'photos', 'close', 'send to phone']
+                            
+                            if any(phrase in line.lower() for phrase in skip_phrases):
+                                continue
+                                
+                            # Add to relevant lines if it seems like meaningful content
+                            if len(line) > 15 and len(line) < 300:
+                                relevant_lines.append(line)
+                        
+                        # Set venue hours if found
+                        if hours_data:
+                            venue_hours = hours_data
+                            
+                        # Combine relevant lines into a description, but limit to first 3 meaningful entries
+                        if relevant_lines:
+                            # Join the most relevant text into a coherent description 
+                            venue_description = ' '.join(relevant_lines[:3])
+                            
+                    # Attempt to fetch venue image using the Google Maps Scraper
+                    business_place_data = GoogleMapsScraper.get_place_data(
+                        decoded_name, 
+                        deal_data.get('location', ''),
+                        deal_data.get('district'),
+                        timeout=3.0  # Shorter timeout to avoid long delays
+                    )
+            except Exception as e:
+                logger.warning(f"Error fetching additional venue details: {e}")
+        
+        # Look for similar deals (same district or nearby)
         try:
             all_deals = deal_db.get_all_deals()
             
@@ -457,12 +540,47 @@ def view_deal(business_name):
                 location = deal.get('location', '').lower()
                 if 'berlin' in location or deal.get('district'):
                     berlin_deals.append(deal)
-            all_deals = berlin_deals
+                    
+            # Find deals in the same district
+            if deal_data.get('district'):
+                district_deals = [d for d in berlin_deals if 
+                                 d.get('district') == deal_data.get('district') and 
+                                 d.get('business_name') != decoded_name]
+                
+                # Get up to 4 similar deals
+                similar_deals = district_deals[:4]
+            
+            # If we don't have enough similar deals, add some random ones
+            if len(similar_deals) < 2:
+                random_deals = [d for d in berlin_deals if 
+                               d.get('business_name') != decoded_name and 
+                               d not in similar_deals]
+                
+                # Shuffle to get random selection
+                random.shuffle(random_deals)
+                
+                # Add random deals up to a total of 4 similar deals
+                similar_deals.extend(random_deals[:4 - len(similar_deals)])
         except Exception as e:
-            logger.error(f"Error getting all deals: {str(e)}")
-        
-        # Get all unique districts for the filter dropdown
-        districts = sorted(list(set(d.get('district') for d in all_deals if d.get('district'))))
+            logger.error(f"Error getting similar deals: {str(e)}")
+            
+        # Generate a venue image if not already available
+        if not venue_image:
+            try:
+                # Generate an image for the venue using the deal information
+                venue_image_bytes = generate_venue_image(
+                    decoded_name,
+                    deal_data.get('deal', 'Happy Hour Deal'),
+                    deal_data.get('location', 'Berlin'),
+                    deal_data.get('district'),
+                    deal_data.get('rating')
+                )
+                
+                if venue_image_bytes:
+                    # Convert to base64 for embedding in HTML
+                    venue_image = base64.b64encode(venue_image_bytes).decode('utf-8')
+            except Exception as e:
+                logger.error(f"Error generating venue image: {str(e)}")
         
         # Add necessary query parameters for social media preview
         query_params = {
@@ -474,16 +592,14 @@ def view_deal(business_name):
         if deal_data.get('district'):
             query_params['district'] = deal_data.get('district')
         
-        # Return the template with the specific deal highlighted
+        # Return the deal detail template with all the gathered information
         return render_template(
-            "index.html", 
-            deals=all_deals,
-            districts=districts,
-            current_district=deal_data.get('district', ''),
-            search_query=decoded_name,
-            deal_type='',
-            sort_by='date',  # Default to date sort when viewing a specific deal
-            highlighted_deal=decoded_name,
+            "deal_detail.html", 
+            deal=deal_data,
+            venue_description=venue_description,
+            venue_image=venue_image,
+            venue_hours=venue_hours,
+            similar_deals=similar_deals,
             **query_params
         )
     except Exception as e:
@@ -495,6 +611,292 @@ def view_deal(business_name):
 def internal_server_error(e):
     """Handle 500 errors"""
     return render_template("index.html", deals=[], error="Internal server error", sort_by='date'), 500
+
+def generate_venue_image(business_name, deal_text, location, district=None, rating=None):
+    """
+    Generate a stylized image for a venue detail page
+    
+    Args:
+        business_name (str): Name of the business
+        deal_text (str): The deal description
+        location (str): Location of the business
+        district (str, optional): Berlin district
+        rating (float, optional): Google Maps rating
+        
+    Returns:
+        bytes: Image data in bytes
+    """
+    try:
+        # Create a 1200x630 image (16:9 aspect ratio)
+        width, height = 1200, 630
+        
+        # Create a base image with a dark gradient background
+        img = Image.new('RGB', (width, height), color=(33, 37, 41))
+        draw = ImageDraw.Draw(img)
+        
+        # Create a nice gradient background
+        for y in range(height):
+            # Create a gradient from dark to slightly less dark
+            r = int(28 + (y / height) * 25)
+            g = int(30 + (y / height) * 25)
+            b = int(35 + (y / height) * 25)
+            draw.line([(0, y), (width, y)], fill=(r, g, b), width=1)
+        
+        # Try to load fonts, fallback to default if not available
+        try:
+            title_font = ImageFont.truetype("Arial Bold.ttf", 60)
+            subtitle_font = ImageFont.truetype("Arial.ttf", 36)
+            deal_font = ImageFont.truetype("Arial.ttf", 48) 
+            info_font = ImageFont.truetype("Arial.ttf", 32)
+        except IOError:
+            try:
+                # Try with different font names
+                title_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
+                subtitle_font = ImageFont.truetype("DejaVuSans.ttf", 36)
+                deal_font = ImageFont.truetype("DejaVuSans.ttf", 48)
+                info_font = ImageFont.truetype("DejaVuSans.ttf", 32)
+            except IOError:
+                # Fallback to default font
+                title_font = ImageFont.load_default()
+                subtitle_font = ImageFont.load_default()
+                deal_font = ImageFont.load_default()
+                info_font = ImageFont.load_default()
+        
+        # Add a stylish header bar with gradient
+        header_height = 120
+        for y in range(header_height):
+            # Create a gradient from primary color to secondary color
+            r = int(139 - (y / header_height) * 56)
+            g = int(38 + (y / header_height) * 158)
+            b = int(53 + (y / header_height) * 129)
+            draw.line([(0, y), (width, y)], fill=(r, g, b), width=1)
+        
+        # Draw a decorative line pattern in the header
+        for x in range(0, width, 40):
+            draw.line([(x, 0), (x + 20, header_height)], fill=(255, 255, 255, 128), width=2)
+        
+        # Draw logo text in header
+        logo_text = "BACKYARD BILLBOARDS"
+        logo_width = draw.textlength(logo_text, font=subtitle_font)
+        draw.text(
+            ((width - logo_width) // 2, 40),
+            logo_text,
+            font=subtitle_font,
+            fill=(255, 255, 255)  # White text
+        )
+        
+        # Add visual decorative elements 
+        # Draw some circles in the background for visual interest
+        circle_colors = [(146, 43, 60, 128), (46, 196, 182, 128), (231, 111, 81, 128)]
+        for i in range(5):
+            # Draw random size circles at random positions
+            size = random.randint(50, 150)
+            x = random.randint(0, width)
+            y = random.randint(header_height + 100, height - 100)
+            color = random.choice(circle_colors)
+            draw.ellipse([(x - size // 2, y - size // 2), (x + size // 2, y + size // 2)], 
+                         fill=color)
+        
+        # Draw business name with a subtle shadow for depth
+        # Truncate if too long
+        if len(business_name) > 25:
+            business_name = business_name[:22] + "..."
+            
+        business_width = draw.textlength(business_name, font=title_font)
+        
+        # Draw shadow
+        draw.text(
+            ((width - business_width) // 2 + 2, 160 + 2),
+            business_name,
+            font=title_font,
+            fill=(0, 0, 0, 180)  # Semi-transparent black for shadow
+        )
+        
+        # Draw text
+        draw.text(
+            ((width - business_width) // 2, 160),
+            business_name,
+            font=title_font,
+            fill=(248, 249, 250)  # Light color
+        )
+        
+        # Add a decorative line under the name
+        line_width = min(business_width + 100, width - 200)
+        draw.line(
+            [((width - line_width) // 2, 240), ((width + line_width) // 2, 240)],
+            fill=(46, 196, 182),  # Teal accent color
+            width=3
+        )
+        
+        # Format and draw deal text - intelligently wrap the text
+        max_chars_per_line = 40
+        formatted_deal = []
+        words = deal_text.split()
+        current_line = []
+        
+        for word in words:
+            if len(' '.join(current_line + [word])) <= max_chars_per_line:
+                current_line.append(word)
+            else:
+                formatted_deal.append(' '.join(current_line))
+                current_line = [word]
+        
+        if current_line:
+            formatted_deal.append(' '.join(current_line))
+        
+        # Limit to 2 lines maximum to avoid crowding
+        if len(formatted_deal) > 2:
+            formatted_deal = formatted_deal[:1] 
+            formatted_deal.append(formatted_deal[0] + "...")
+        
+        # Create a semi-transparent background for the deal text
+        deal_box_padding = 20
+        deal_box_height = len(formatted_deal) * 55 + deal_box_padding * 2
+        deal_box_y = 270
+        
+        # Draw the semitransparent rectangle
+        draw.rectangle(
+            [(100, deal_box_y), (width - 100, deal_box_y + deal_box_height)],
+            fill=(0, 0, 0, 80),  # Semi-transparent black
+            outline=(46, 196, 182),  # Teal accent color
+            width=2
+        )
+        
+        # Draw the deal text on the semi-transparent background
+        deal_y = deal_box_y + deal_box_padding
+        for line in formatted_deal:
+            line_width = draw.textlength(line, font=deal_font)
+            draw.text(
+                ((width - line_width) // 2, deal_y),
+                line,
+                font=deal_font,
+                fill=(248, 249, 250)  # Light text
+            )
+            deal_y += 55
+        
+        # Draw a decorative icon to represent deals
+        icon_size = 40
+        icon_x = (width - icon_size) // 2
+        icon_y = deal_box_y + deal_box_height + 20
+        
+        # Draw simple drink icon (a cocktail glass)
+        draw.polygon(
+            [(icon_x, icon_y), (icon_x + icon_size, icon_y), (icon_x + icon_size//2, icon_y + icon_size)],
+            fill=(231, 111, 81)  # Accent color for icon
+        )
+        draw.rectangle(
+            [(icon_x + icon_size//4, icon_y + icon_size), (icon_x + 3*icon_size//4, icon_y + icon_size + 10)],
+            fill=(231, 111, 81)  # Same accent color for stem
+        )
+        
+        # Draw location information
+        location_y = deal_box_y + deal_box_height + 80
+        
+        # Format the location text
+        location_text = location
+        if district:
+            location_text = f"{district} · {location}"
+            
+        location_width = draw.textlength(location_text, font=info_font)
+        
+        # Draw a pin icon next to location
+        pin_radius = 10
+        pin_x = (width - location_width) // 2 - 30
+        pin_y = location_y + 15
+        
+        # Draw the pin head
+        draw.ellipse(
+            [(pin_x - pin_radius, pin_y - pin_radius), (pin_x + pin_radius, pin_y + pin_radius)],
+            fill=(220, 53, 69)  # Red for the pin
+        )
+        
+        # Draw the pin point
+        draw.polygon(
+            [(pin_x - pin_radius, pin_y), (pin_x + pin_radius, pin_y), (pin_x, pin_y + pin_radius*2)],
+            fill=(220, 53, 69)  # Red for the pin
+        )
+        
+        # Draw the location text
+        draw.text(
+            ((width - location_width) // 2, location_y),
+            location_text,
+            font=info_font,
+            fill=(248, 249, 250)  # Light text
+        )
+        
+        # Draw rating if available
+        if rating:
+            rating_y = location_y + 50
+            rating_text = f"Rating: {rating} "
+            
+            # Add stars based on rating
+            full_stars = int(rating)
+            has_half_star = rating - full_stars >= 0.5
+            
+            rating_width = draw.textlength(rating_text, font=info_font)
+            star_width = draw.textlength("★", font=info_font)
+            total_width = rating_width + (full_stars * star_width) + (1 * star_width if has_half_star else 0)
+            
+            # Draw the text
+            draw.text(
+                ((width - total_width) // 2, rating_y),
+                rating_text,
+                font=info_font,
+                fill=(248, 249, 250)  # Light text
+            )
+            
+            # Draw the stars
+            star_x = (width - total_width) // 2 + rating_width
+            for i in range(full_stars):
+                draw.text(
+                    (star_x, rating_y),
+                    "★",
+                    font=info_font,
+                    fill=(255, 193, 7)  # Yellow for stars
+                )
+                star_x += star_width
+                
+            # Draw half star if needed
+            if has_half_star:
+                draw.text(
+                    (star_x, rating_y),
+                    "★",  # We'll use the same star but make it partially transparent
+                    font=info_font,
+                    fill=(255, 193, 7, 128)  # Semi-transparent yellow
+                )
+        
+        # Add a footer with website and design elements
+        footer_y = height - 60
+        footer_text = "www.backyardbillboards.de"
+        footer_width = draw.textlength(footer_text, font=subtitle_font)
+        
+        # Draw a decorative line above the footer
+        draw.line(
+            [(100, footer_y - 20), (width - 100, footer_y - 20)],
+            fill=(173, 181, 189),  # Gray for line
+            width=1
+        )
+        
+        # Draw the footer text
+        draw.text(
+            ((width - footer_width) // 2, footer_y),
+            footer_text,
+            font=subtitle_font,
+            fill=(173, 181, 189)  # Gray text
+        )
+        
+        # Convert the image to bytes
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='JPEG', quality=95)
+        img_byte_arr.seek(0)
+        
+        return img_byte_arr.getvalue()
+    
+    except Exception as e:
+        logger.error(f"Error generating venue image: {str(e)}")
+        # Return default image path if there's an error
+        with open("static/img/og-default.jpg", "rb") as f:
+            return f.read()
 
 def generate_og_deal_image(business_name, deal_text, location, district=None, rating=None):
     """

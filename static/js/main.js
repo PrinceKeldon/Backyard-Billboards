@@ -151,3 +151,5 @@ function registerTimeAgoFilter() {
     // In the actual implementation, we'd use the utils.py get_time_ago function
     console.log('Time ago filter would be registered server-side');
 }
+
+

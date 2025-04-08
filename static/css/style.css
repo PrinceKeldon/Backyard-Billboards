@@ -336,6 +336,11 @@ h1, h2, h3, h4, h5, h6 {
     transition: all 0.2s ease;
     border-radius: 20px;
     padding: 0.25rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bb-primary);
+    background-color: transparent;
+    color: var(--bb-primary);
 }
 
 .upvote-btn:hover {
@@ -344,14 +349,129 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateY(-2px);
 }
 
-.upvote-btn .vote-count {
+.upvote-btn .fa-thumbs-up {
+    margin-right: 0.25rem;
+}
+
+.upvote-btn .upvote-count {
     font-weight: bold;
     margin-left: 3px;
+    transition: all 0.3s ease;
+    display: inline-block;
 }
 
 .upvote-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+/* Upvote animations */
+.upvote-animation {
+    animation: pulse 0.5s ease;
+}
+
+.upvote-success {
+    background-color: var(--bb-secondary) !important;
+    border-color: var(--bb-secondary) !important;
+    color: white !important;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Deal detail page styling */
+.deal-image-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px 8px 0 0;
+}
+
+.deal-highlight {
+    background: linear-gradient(to right, rgba(139, 38, 53, 0.1), rgba(46, 196, 182, 0.1));
+    border-left: 4px solid var(--bb-primary);
+}
+
+.text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.breadcrumb a {
+    color: var(--bb-primary);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    color: var(--bb-secondary);
+}
+
+.breadcrumb-item.active {
+    color: var(--bb-secondary);
+    font-weight: 600;
+}
+
+/* Map container styling */
+.map-container {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Post to Telegram button hover effect */
+.post-to-telegram:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Sharing options styling */
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(139, 38, 53, 0.1);
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+/* Venue description styling */
+.venue-description {
+    line-height: 1.6;
+}
+
+/* Similar deals section */
+.similar-deals-title {
+    position: relative;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.similar-deals-title::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background-color: var(--bb-secondary);
 }
 
 /* Responsive adjustments */
@@ -367,6 +487,15 @@ h1, h2, h3, h4, h5, h6 {
     /* Make upvote button more compact on mobile */
     .upvote-btn {
         padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Adjust detail page for mobile */
+    .deal-image-container {
+        min-height: 200px !important;
+    }
+    
+    .breadcrumb {
         font-size: 0.8rem;
     }
 }

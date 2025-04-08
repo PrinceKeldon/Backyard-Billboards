@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ deal.business_name }} - Happy Hour Deal | Backyard Billboards{% endblock %}
+
+{% block og_title %}{{ deal.business_name }} - {{ deal.deal }}{% endblock %}
+{% block og_description %}{{ deal.deal }} at {{ deal.business_name }} in {{ deal.location }}{% if deal.district %}, {{ deal.district }}{% endif %}{% endblock %}
+{% block og_image %}{{ url_for('og_image', business_name=deal.business_name, _external=True) }}{% endblock %}
+
+{% block twitter_title %}{{ self.og_title() }}{% endblock %}
+{% block twitter_description %}{{ self.og_description() }}{% endblock %}
+{% block twitter_image %}{{ self.og_image() }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('home') }}">Home</a></li>
+            {% if deal.district %}
+            <li class="breadcrumb-item"><a href="{{ url_for('home', district=deal.district) }}">{{ deal.district }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item active" aria-current="page">{{ deal.business_name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="deal-image-container position-relative" style="min-height: 300px; background-color: #25232E;">
+                        {% if venue_image %}
+                        <img src="data:image/jpeg;base64,{{ venue_image }}" class="img-fluid w-100" style="max-height: 400px; object-fit: cover;" alt="{{ deal.business_name }}">
+                        {% else %}
+                        <div class="p-5 text-center" style="background: linear-gradient(135deg, var(--bb-primary), var(--bb-secondary));">
+                            <div class="py-5">
+                                <h1 class="display-4 text-white text-shadow" style="font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">{{ deal.business_name }}</h1>
+                                <p class="lead text-white mb-0">{{ deal.deal }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Overlay details at the bottom of the image -->
+                        <div class="position-absolute bottom-0 start-0 w-100 p-3" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);">
+                            <div class="d-flex justify-content-between align-items-end">
+                                <div>
+                                    {% if deal.district %}
+                                    <span class="badge bg-secondary mb-2">{{ deal.district }}</span>
+                                    {% endif %}
+                                    
+                                    <h5 class="text-white mb-0">
+                                        <i class="fas fa-map-marker-alt me-2"></i>
+                                        {{ deal.location }}
+                                    </h5>
+                                </div>
+                                
+                                {% if deal.rating %}
+                                <div class="text-white">
+                                    <span class="text-warning">
+                                        {% for i in range(deal.rating|int) %}★{% endfor %}
+                                        {% if deal.rating|int < deal.rating %}½{% endif %}
+                                    </span>
+                                    <span class="ms-1">{{ deal.rating }}</span>
+                                    {% if deal.reviews_count %}
+                                    <small class="ms-1">({{ deal.reviews_count }} reviews)</small>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4">
+                        <h1 class="mb-3">{{ deal.business_name }}</h1>
+                        
+                        <div class="deal-highlight p-3 mb-4 rounded" style="background: linear-gradient(to right, rgba(139, 38, 53, 0.1), rgba(46, 196, 182, 0.1));">
+                            <h3 class="text-primary">
+                                <i class="fas fa-glass-martini-alt me-2"></i>
+                                Happy Hour Deal
+                            </h3>
+                            <p class="lead mb-0">{{ deal.deal }}</p>
+                            
+                            <div class="text-muted mt-2">
+                                <small>
+                                    <i class="far fa-clock me-1"></i>
+                                    Added {{ deal.scraped_at | to_time_ago }}
+                                </small>
+                                
+                                <button class="btn btn-sm upvote-btn ms-3" data-business="{{ deal.business_name }}" title="Upvote this deal">
+                                    <i class="fas fa-thumbs-up"></i>
+                                    <span class="upvote-count">{{ deal.votes|default(0) }}</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {% if venue_description %}
+                        <div class="mb-4">
+                            <h3>About {{ deal.business_name }}</h3>
+                            <p>{{ venue_description }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if venue_hours %}
+                        <div class="mb-4">
+                            <h3>Opening Hours</h3>
+                            <ul class="list-unstyled">
+                                {% for day, hours in venue_hours.items() %}
+                                <li class="mb-2">
+                                    <strong>{{ day }}:</strong> {{ hours }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
+                        {% if similar_deals %}
+                        <div class="mt-5">
+                            <h3>Similar Deals Nearby</h3>
+                            <div class="row g-4">
+                                {% for similar in similar_deals %}
+                                <div class="col-md-6">
+                                    <div class="card h-100 deal-card">
+                                        <div class="card-header">
+                                            <h5 class="mb-0">{{ similar.business_name }}</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <p>{{ similar.deal }}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-map-marker-alt me-1"></i>
+                                                {{ similar.location }}
+                                                {% if similar.district %}
+                                                <span class="badge bg-secondary ms-1">{{ similar.district }}</span>
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="card-footer">
+                                            <a href="{{ url_for('view_deal', business_name=similar.business_name) }}" class="btn btn-sm btn-outline-primary">View Deal</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Action buttons -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Actions</h5>
+                    <div class="d-grid gap-2">
+                        {% if deal.has_accurate_location or deal.google_maps_url %}
+                        <a href="{{ deal.google_maps_url or 'https://www.google.com/maps/search/' + deal.business_name|urlencode + '+' + deal.location|urlencode }}" target="_blank" class="btn btn-success">
+                            <i class="fas fa-map-marked-alt me-2"></i> View on Google Maps
+                        </a>
+                        {% endif %}
+                        
+                        <button class="btn btn-primary post-to-telegram" data-business="{{ deal.business_name }}">
+                            <i class="fab fa-telegram me-2"></i> Share on Telegram
+                        </button>
+                        
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="shareDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-share-alt me-2"></i> More Sharing Options
+                            </button>
+                            <ul class="dropdown-menu w-100" aria-labelledby="shareDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="https://twitter.com/intent/tweet?url={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}&text=Check out this deal at {{ deal.business_name }}!" target="_blank">
+                                        <i class="fab fa-twitter me-2"></i> Share on Twitter
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}" target="_blank">
+                                        <i class="fab fa-facebook me-2"></i> Share on Facebook
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="mailto:?subject=Check out this happy hour deal&body=I found this great deal at {{ deal.business_name }}:%0A%0A{{ deal.deal }}%0A%0ALocation: {{ deal.location }}%0A%0ACheck it out here: {{ url_for('view_deal', business_name=deal.business_name, _external=True) }}">
+                                        <i class="fas fa-envelope me-2"></i> Share via Email
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Location information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Location</h5>
+                    <div class="map-container mb-3">
+                        <iframe 
+                            width="100%" 
+                            height="250" 
+                            style="border:0; border-radius: 8px;" 
+                            loading="lazy" 
+                            allowfullscreen 
+                            src="https://www.google.com/maps/embed/v1/place?key=&q={{ deal.business_name|urlencode }}+{{ deal.location|urlencode }}">
+                        </iframe>
+                    </div>
+                    <p class="mb-1">
+                        <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                        {{ deal.location }}
+                    </p>
+                    {% if deal.district %}
+                    <p class="mb-1">
+                        <i class="fas fa-map me-2 text-primary"></i>
+                        {{ deal.district }} District
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Additional business info -->
+            {% if deal.place_type or deal.price_level %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">Business Information</h5>
+                    {% if deal.place_type %}
+                    <p class="mb-1">
+                        <i class="fas fa-utensils me-2 text-secondary"></i>
+                        Type: {{ deal.place_type }}
+                    </p>
+                    {% endif %}
+                    
+                    {% if deal.price_level %}
+                    <p class="mb-1">
+                        <i class="fas fa-euro-sign me-2 text-success"></i>
+                        Price level: 
+                        <span class="text-muted">
+                            {% for i in range(deal.price_level) %}€{% endfor %}
+                        </span>
+                    </p>
+                    {% endif %}
+                    
+                    {% if deal.has_website %}
+                    <p class="mb-1">
+                        <i class="fas fa-globe me-2 text-info"></i>
+                        <a href="{{ deal.google_maps_url }}" target="_blank">Visit website via Google Maps</a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Telegram Post Modal -->
+<div class="modal fade" id="telegramPostModal" tabindex="-1" aria-labelledby="telegramPostModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="telegramPostModalLabel">Posting to Telegram</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="text-center mt-3" id="postingMessage">Posting to Telegram...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Telegram posting functionality
+        const postButtons = document.querySelectorAll('.post-to-telegram');
+        const modal = new bootstrap.Modal(document.getElementById('telegramPostModal'));
+        const postingMessage = document.getElementById('postingMessage');
+        
+        // Upvote functionality
+        const upvoteButtons = document.querySelectorAll('.upvote-btn');
+        
+        upvoteButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const businessName = this.getAttribute('data-business');
+                const voteCountElement = this.querySelector('.upvote-count');
+                
+                // Show animation when button is clicked
+                this.classList.add('upvote-animation');
+                
+                // Make API call to upvote
+                fetch('/upvote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest' // Mark as AJAX request
+                    },
+                    body: `business_name=${encodeURIComponent(businessName)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update the vote count
+                        voteCountElement.textContent = data.vote_count;
+                        
+                        // Add success animation (uses the CSS class we added)
+                        this.classList.add('upvote-success');
+                        
+                        // Remove success class after delay
+                        setTimeout(() => {
+                            this.classList.remove('upvote-success');
+                        }, 1000);
+                    } else {
+                        // Show error (could be improved with a toast notification)
+                        console.error('Error upvoting:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error upvoting:', error);
+                })
+                .finally(() => {
+                    // Remove the animation class after a delay
+                    setTimeout(() => {
+                        this.classList.remove('upvote-animation');
+                    }, 500);
+                });
+            });
+        });
+        
+        // Telegram posting functionality
+        postButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const businessName = this.getAttribute('data-business');
+                
+                // Show modal
+                postingMessage.textContent = `Posting deal for ${businessName} to Telegram...`;
+                modal.show();
+                
+                // Make API call to post to Telegram
+                fetch('/post', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `business_name=${encodeURIComponent(businessName)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        postingMessage.innerHTML = `<div class="alert alert-success">Successfully posted to Telegram!</div>`;
+                        setTimeout(() => {
+                            modal.hide();
+                        }, 2000);
+                    } else {
+                        postingMessage.innerHTML = `<div class="alert alert-danger">Error: ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    postingMessage.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
