@@ -16,7 +16,7 @@ class DealDB:
             logger.error(f"Error initializing database: {str(e)}")
             raise
     
-    def add_deal(self, business_name, deal, location, district=None, has_accurate_location=False):
+    def add_deal(self, business_name, deal, location, **kwargs):
         """
         Add a deal to the database
         
@@ -24,8 +24,14 @@ class DealDB:
             business_name (str): Name of the business
             deal (str): Description of the deal
             location (str): Location of the business
-            district (str, optional): District/neighborhood (for Berlin)
-            has_accurate_location (bool, optional): Whether location is accurate for mapping
+            **kwargs: Additional properties including:
+                district (str): District/neighborhood (for Berlin)
+                has_accurate_location (bool): Whether location is accurate for mapping
+                rating (float): Google Maps rating (1-5)
+                reviews_count (int): Number of reviews
+                place_type (str): Type of establishment (Bar, Restaurant, etc.)
+                price_level (int): Price level (1-4)
+                google_maps_url (str): URL to Google Maps page
         """
         try:
             if not business_name or not deal or not location:
@@ -35,11 +41,18 @@ class DealDB:
                 "deal": deal,
                 "location": location,
                 "scraped_at": str(datetime.now()),
-                "has_accurate_location": has_accurate_location
+                "has_accurate_location": kwargs.get("has_accurate_location", False)
             }
             
-            if district:
-                deal_data["district"] = district
+            # Add optional fields from kwargs
+            optional_fields = [
+                "district", "rating", "reviews_count", "place_type", 
+                "price_level", "google_maps_url"
+            ]
+            
+            for field in optional_fields:
+                if field in kwargs and kwargs[field] is not None:
+                    deal_data[field] = kwargs[field]
                 
             self.db[business_name] = deal_data
             logger.debug(f"Added deal for {business_name}")

@@ -5,6 +5,8 @@ import logging
 import time
 import random
 from urllib.parse import quote
+import os
+from google_maps_scraper import GoogleMapsScraper
 
 logger = logging.getLogger(__name__)
 
@@ -500,13 +502,14 @@ class YelpScraper:
         return deals
     
     @staticmethod
-    def scrape(location="Austin", limit=5):
+    def scrape(location="Austin", limit=5, enrich_with_google=True):
         """
         Generate happy hour deals for the specified location
         
         Args:
             location (str): Location to search for happy hour deals
             limit (int): Maximum number of deals to return
+            enrich_with_google (bool): Whether to enrich deals with Google Maps data
             
         Returns:
             list: List of dictionaries containing deal information
@@ -519,6 +522,31 @@ class YelpScraper:
             
             # Generate region-specific deals
             deals = YelpScraper.generate_deals_for_region(region_data, location, limit)
+            
+            # Enrich with Google Maps data if requested (and environment variable is set to enable it)
+            if enrich_with_google and os.environ.get("ENABLE_GOOGLE_MAPS_SCRAPING", "").lower() in ("true", "1", "yes"):
+                logger.debug(f"Enriching deals with Google Maps data")
+                
+                # Process a subset of deals for Google Maps enrichment to avoid rate limiting
+                google_enrichment_limit = min(len(deals), 3)  # Limit Google Maps enrichment to 3 deals by default
+                
+                # Allow overriding the limit with an environment variable
+                try:
+                    env_limit = os.environ.get("GOOGLE_MAPS_ENRICHMENT_LIMIT")
+                    if env_limit:
+                        google_enrichment_limit = min(len(deals), int(env_limit))
+                except (ValueError, TypeError):
+                    pass  # Use the default limit if environment variable is invalid
+                
+                # Enrich deals with Google Maps data
+                for i in range(google_enrichment_limit):
+                    try:
+                        deals[i] = GoogleMapsScraper.enrich_deal_data(deals[i])
+                        # Add a short delay between requests to avoid rate limiting
+                        if i < google_enrichment_limit - 1:
+                            time.sleep(random.uniform(1.0, 3.0))
+                    except Exception as e:
+                        logger.error(f"Error enriching deal {i} with Google Maps data: {str(e)}")
             
             logger.debug(f"Generated {len(deals)} deals for {location}")
             return deals

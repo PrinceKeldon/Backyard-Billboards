@@ -29,12 +29,32 @@
         {% endif %}
     </div>
     <div class="col-md-4 d-flex justify-content-md-end align-items-center">
-        <form action="{{ url_for('scrape_deals') }}" method="POST" class="d-flex">
-            <input type="text" name="location" class="form-control me-2" placeholder="City (default: Berlin)" aria-label="Location">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-search me-1"></i> Scrape Deals
+        <div class="dropdown me-2">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="scrapeOptionsButton" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-cog"></i>
             </button>
-        </form>
+            <form action="{{ url_for('scrape_deals') }}" method="POST" id="scrapeForm" class="dropdown-menu p-3" style="width: 280px;">
+                <div class="mb-3">
+                    <label for="locationInput" class="form-label">Location</label>
+                    <input type="text" class="form-control" id="locationInput" name="location" placeholder="City (default: Berlin)">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="googleMapsCheck" name="use_google_maps" checked>
+                    <label class="form-check-label" for="googleMapsCheck">
+                        Enrich with Google Maps data
+                    </label>
+                    <div class="form-text">
+                        <small>Adds ratings, reviews, and more accurate location data</small>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i> Scrape Deals
+                </button>
+            </form>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('scrapeForm').submit();">
+            <i class="fas fa-search me-1"></i> Scrape Deals
+        </button>
     </div>
 </div>
 
@@ -96,6 +116,43 @@
                     <span class="badge bg-secondary ms-2">{{ deal.district }}</span>
                     {% endif %}
                 </p>
+                
+                <!-- Google Maps data if available -->
+                {% if deal.rating or deal.reviews_count or deal.place_type or deal.price_level %}
+                <div class="card-text pt-2 border-top">
+                    <small class="text-muted">
+                        {% if deal.rating %}
+                        <div>
+                            <i class="fas fa-star text-warning me-1"></i>
+                            <strong>{{ deal.rating }}</strong>
+                            {% if deal.reviews_count %}
+                            <span class="ms-1">({{ deal.reviews_count }} reviews)</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if deal.place_type %}
+                        <div>
+                            <i class="fas fa-utensils me-1"></i>
+                            {{ deal.place_type }}
+                            {% if deal.price_level %}
+                            <span class="ms-2">
+                                {% for i in range(deal.price_level) %}€{% endfor %}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if deal.google_maps_url %}
+                        <div class="mt-1">
+                            <a href="{{ deal.google_maps_url }}" target="_blank" class="text-decoration-none">
+                                <i class="fab fa-google me-1"></i>View on Google Maps
+                            </a>
+                        </div>
+                        {% endif %}
+                    </small>
+                </div>
+                {% endif %}
             </div>
             <div class="card-footer text-muted d-flex justify-content-between align-items-center">
                 <small>

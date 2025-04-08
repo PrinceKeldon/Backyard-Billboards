@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+# Set application environment variables
+os.environ["ENABLE_GOOGLE_MAPS_SCRAPING"] = "true"  # Enable Google Maps scraping by default
+os.environ["GOOGLE_MAPS_ENRICHMENT_LIMIT"] = "5"    # Limit to 5 deals per request
+
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET")
@@ -70,24 +74,51 @@ def scrape_deals():
     try:
         rate_limit()
         location = request.form.get("location", "Berlin")  # Default to Berlin
-        scraped_deals = YelpScraper.scrape(location)
+        use_google_maps = request.form.get("use_google_maps", "on") == "on"
+        
+        # Scrape deals (with Google Maps data if enabled)
+        scraped_deals = YelpScraper.scrape(location, enrich_with_google=use_google_maps)
         
         # Add each deal to the database
         for deal in scraped_deals:
-            # Check if this is a Berlin deal with district info
+            # Get deal attributes with proper defaults
             district = deal.get("district")
             has_accurate_location = deal.get("has_accurate_location", False)
+            
+            # Get Google Maps data if available
+            rating = deal.get("rating")
+            reviews_count = deal.get("reviews_count") 
+            place_type = deal.get("place_type")
+            price_level = deal.get("price_level")
+            google_maps_url = deal.get("google_maps_url")
+            google_maps_address = deal.get("google_maps_address")
+            
+            # Use the Google Maps address if it's available
+            location = google_maps_address or deal["location"]
+            
+            # Additional deal properties
+            deal_props = {
+                "district": district,
+                "has_accurate_location": has_accurate_location,
+                "rating": rating,
+                "reviews_count": reviews_count,
+                "place_type": place_type,
+                "price_level": price_level,
+                "google_maps_url": google_maps_url
+            }
+            
+            # Only add properties that are not None
+            deal_props = {k: v for k, v in deal_props.items() if v is not None}
             
             # Add to database with all available info
             deal_db.add_deal(
                 deal["name"], 
                 deal["deal"], 
-                deal["location"],
-                district=district, 
-                has_accurate_location=has_accurate_location
+                location,
+                **deal_props
             )
         
-        flash(f"Successfully scraped {len(scraped_deals)} deals!", "success")
+        flash(f"Successfully scraped {len(scraped_deals)} deals{' with Google Maps data' if use_google_maps else ''}!", "success")
     except Exception as e:
         logger.error(f"Error scraping deals: {str(e)}")
         flash(f"Error scraping deals: {str(e)}", "danger")
