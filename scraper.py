@@ -504,7 +504,8 @@ class YelpScraper:
     @staticmethod
     def clean_dataset():
         """Cleans the dataset by ensuring all deals have Berlin in their location or a district set.
-        Also standardizes the locations to include Berlin if missing."""
+        Also standardizes the locations to include Berlin if missing, and REMOVES any deals
+        that have non-Berlin locations (like American street names or other countries)."""
         from db import DealDB
         deal_db = DealDB()
         deals = deal_db.get_all_deals()
@@ -513,15 +514,94 @@ class YelpScraper:
         logger.info(f"Cleaning {len(deals)} deals in the dataset...")
         
         cleaned_count = 0
+        deleted_count = 0
+        
+        # List of confirmed Berlin districts for validation
+        berlin_districts = [
+            "Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg", 
+            "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten",
+            "Lichtenberg", "Köpenick", "Spandau", "Steglitz", "Marzahn", "Wilmersdorf",
+            "Tempelhof", "Treptow", "Pankow", "Reinickendorf", "Zehlendorf"
+        ]
+        
+        # Common German/Berlin street indicators
+        berlin_street_indicators = [
+            "straße", "strasse", "allee", "platz", "damm", "weg", "ufer", "chaussee", 
+            "gasse", "ring", "graben", "brücke", "bruecke", "promenade", "tor", "steg"
+        ]
+        
+        # Common American street indicators that suggest non-Berlin locations
+        non_berlin_indicators = [
+            "street", "ave", "avenue", "blvd", "boulevard", "road", "rd", "drive", "dr", 
+            "lane", "ln", "way", "court", "ct", "circle", "cir", "terrace", "broadway"
+        ]
+        
+        # List of common U.S. states and cities that suggest non-Berlin locations
+        us_locations = [
+            "new york", "los angeles", "chicago", "houston", "philadelphia", "phoenix", 
+            "san antonio", "san diego", "dallas", "san jose", "austin", "jacksonville", 
+            "san francisco", "columbus", "charlotte", "seattle", "denver", "washington dc",
+            "boston", "portland", "las vegas", "nashville", "baltimore", "oklahoma city",
+            "california", "texas", "florida", "new york", "pennsylvania", "illinois", 
+            "ohio", "georgia", "michigan", "north carolina", "new jersey", "virginia",
+            "washington", "arizona", "massachusetts", "tennessee", "indiana", "missouri",
+            "usa", "united states", "america", "nyc", "la", "sf", "nj", "ny"
+        ]
+        
         for deal in deals:
             business_name = deal.get('business_name')
             location = deal.get('location', '')
             district = deal.get('district')
             
+            # Skip if no business name
+            if not business_name:
+                continue
+                
+            # Get current deal data
+            deal_data = deal_db.get_deal(business_name)
+            if not deal_data:
+                continue
+            
+            # Check if this is likely a non-Berlin location
+            location_lower = location.lower()
+            
+            # Determine if this is likely a non-Berlin location based on indicators
+            is_non_berlin = False
+            
+            # Check for U.S. locations or common American street name patterns
+            if any(us_loc in location_lower for us_loc in us_locations):
+                is_non_berlin = True
+            
+            # Check for American street indicators (while making sure we're not catching German street names)
+            for indicator in non_berlin_indicators:
+                # Look for the indicator as a standalone word (with spaces, at end of string, or before a comma/period)
+                if (f" {indicator} " in f" {location_lower} " or 
+                    location_lower.endswith(f" {indicator}") or 
+                    f" {indicator}," in location_lower or 
+                    f" {indicator}." in location_lower or
+                    # Check for street numbers + street type (e.g., "123 Oak St" or "456 Main Ave")
+                    re.search(r'\d+\s+\w+\s+' + indicator + r'[\s,\.]', location_lower)):
+                    # Make sure it's not part of a German word
+                    if not any(berlin_ind in location_lower for berlin_ind in berlin_street_indicators):
+                        is_non_berlin = True
+                        break
+            
+            # If it's a non-Berlin location, delete it
+            if is_non_berlin:
+                try:
+                    deal_db.delete_deal(business_name)
+                    deleted_count += 1
+                    logger.info(f"Deleted non-Berlin location: {business_name} - {location}")
+                    continue
+                except Exception as e:
+                    logger.error(f"Error deleting deal {business_name}: {str(e)}")
+                    continue
+            
+            # Continue with updating valid Berlin locations
             needs_update = False
             
             # Add Berlin to the location if it's missing and no district is set
-            if 'berlin' not in location.lower() and not district:
+            if 'berlin' not in location_lower and not district:
                 # Check if location has just a street name or is missing entirely
                 if location.strip() and not location.endswith(', '):
                     location = f"{location}, Berlin"
@@ -529,35 +609,37 @@ class YelpScraper:
                     location = f"{location}Berlin"
                 needs_update = True
                 
-            # If we have a district but no Berlin in the location, add Berlin
-            if district and 'berlin' not in location.lower():
+            # If we have a district but no Berlin in the location, add both district and Berlin
+            if district and 'berlin' not in location_lower:
                 if location.strip() and not location.endswith(', '):
                     location = f"{location}, {district}, Berlin"
                 else:
                     location = f"{location}{district}, Berlin"
                 needs_update = True
+                
+            # If the district isn't one of the known Berlin districts, add it
+            if district and district not in berlin_districts:
+                berlin_districts.append(district)
             
             # Update the deal if needed
             if needs_update and business_name:
                 try:
-                    deal_data = deal_db.get_deal(business_name)
-                    if deal_data:
-                        # Update the location
-                        deal_data['location'] = location
-                        # Set has_accurate_location to True since we're adding Berlin
-                        deal_data['has_accurate_location'] = True
-                        # Set it back in the database
-                        deal_db.delete_deal(business_name)
-                        # Use all existing deal properties except the ones we're explicitly setting
-                        deal_props = {k: v for k, v in deal_data.items() if k not in ['business_name', 'deal', 'location', 'has_accurate_location']}
-                        deal_props['has_accurate_location'] = True
-                        deal_db.add_deal(business_name, deal_data['deal'], location, **deal_props)
-                        cleaned_count += 1
+                    # Update the location
+                    deal_data['location'] = location
+                    # Set has_accurate_location to True since we're adding Berlin
+                    deal_data['has_accurate_location'] = True
+                    # Set it back in the database
+                    deal_db.delete_deal(business_name)
+                    # Use all existing deal properties except the ones we're explicitly setting
+                    deal_props = {k: v for k, v in deal_data.items() if k not in ['business_name', 'deal', 'location', 'has_accurate_location']}
+                    deal_props['has_accurate_location'] = True
+                    deal_db.add_deal(business_name, deal_data['deal'], location, **deal_props)
+                    cleaned_count += 1
                 except Exception as e:
                     logger.error(f"Error updating deal {business_name}: {str(e)}")
         
-        logger.info(f"Cleaned {cleaned_count} deals in the dataset.")
-        return cleaned_count
+        logger.info(f"Cleaned {cleaned_count} deals in the dataset and removed {deleted_count} non-Berlin locations.")
+        return cleaned_count + deleted_count
         
     @staticmethod
     def scrape(location="Berlin", limit=5, enrich_with_google=False):

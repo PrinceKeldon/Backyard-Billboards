@@ -119,8 +119,28 @@ def home():
         # Get all unique districts for the filter dropdown
         districts = sorted(list(set(d.get('district') for d in deals if d.get('district'))))
         
-        # Always sort by date (newest first) for simplified user experience
-        filtered_deals = sorted(filtered_deals, key=lambda x: x.get("scraped_at", ""), reverse=True)
+        # First sort by district match (if district filter is active), then by date
+        if district:
+            # Prioritize deals in the selected district by creating a key function
+            # that returns (0, date) for deals in the selected district and (1, date) for others
+            # This ensures district matches come first, and within each group, newest first
+            def sort_key(deal):
+                deal_district = deal.get("district", "")
+                date = deal.get("scraped_at", "")
+                # Return a tuple: first element determines primary sort order (0 for district match, 1 for non-match)
+                # For the second element, we need to order by date (newest first)
+                # When using reverse=True for sorting, we need to invert our logic:
+                # - We want district matches (0) to come BEFORE non-matches (1), so with reverse=True,
+                #   we need to use (1) for matches and (0) for non-matches
+                # - Similarly for dates, with reverse=True, earlier dates will appear before later dates
+                return (1 if deal_district == district else 0, date if date else "")
+            
+            # Sort using the custom key function
+            # First by district match (0 before 1), then by date (newest first)
+            filtered_deals = sorted(filtered_deals, key=sort_key, reverse=True)
+        else:
+            # If no district filter, just sort by date (newest first)
+            filtered_deals = sorted(filtered_deals, key=lambda x: x.get("scraped_at", ""), reverse=True)
         
         # Return the filtered deals with all filter parameters
         return render_template(
