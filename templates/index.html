@@ -39,20 +39,17 @@
                     </div>
                 </div>
                 
-                <!-- Deal type filter buttons -->
+                <!-- Deal type filter buttons - restricting to Drinks and Happy Hour only -->
                 <div class="col-12 mt-2">
                     <div class="btn-group w-100" role="group">
                         <input type="radio" class="btn-check" name="deal_type" id="all_deals" value="" autocomplete="off" {% if not deal_type %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="all_deals">All Deals</label>
+                        <label class="btn btn-outline-secondary" for="all_deals">All Berlin Deals</label>
                         
                         <input type="radio" class="btn-check" name="deal_type" id="drinks" value="drink" autocomplete="off" {% if deal_type == 'drink' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="drinks">Drinks</label>
-                        
-                        <input type="radio" class="btn-check" name="deal_type" id="food" value="food" autocomplete="off" {% if deal_type == 'food' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="food">Food</label>
+                        <label class="btn btn-outline-secondary" for="drinks">Drink Deals</label>
                         
                         <input type="radio" class="btn-check" name="deal_type" id="happy_hour" value="happy hour" autocomplete="off" {% if deal_type == 'happy hour' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="happy_hour">Happy Hour</label>
+                        <label class="btn btn-outline-secondary" for="happy_hour">Happy Hour Specials</label>
                     </div>
                 </div>
                 
@@ -75,7 +72,8 @@
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="scrapeOptionsButton" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-cog"></i>
             </button>
-            <form action="{{ url_for('scrape_deals') }}" method="POST" id="scrapeForm" class="dropdown-menu p-3" style="width: 280px;">
+            <div class="dropdown-menu p-3" style="width: 280px;">
+                <form action="{{ url_for('scrape_deals') }}" method="POST" id="scrapeForm">
                 <div class="mb-3">
                     <label for="locationInput" class="form-label">Location</label>
                     <input type="text" class="form-control" id="locationInput" name="location" placeholder="City (default: Berlin)">
@@ -89,10 +87,15 @@
                         <small>Adds ratings, reviews, and more accurate location data (slower)</small>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100 mb-3">
                     <i class="fas fa-search me-1"></i> Scrape Deals
                 </button>
             </form>
+            <hr>
+            <h6 class="mb-2">Data Management</h6>
+            <a href="{{ url_for('clean_dataset') }}" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-broom me-1"></i> Clean Berlin Locations
+            </a>
         </div>
         <button type="button" class="btn btn-primary" onclick="document.getElementById('scrapeForm').submit();">
             <i class="fas fa-search me-1"></i> Scrape Deals
@@ -131,8 +134,8 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ loop.index }}">
                         <li>
-                            <button class="dropdown-item post-to-facebook" data-business="{{ deal.business_name }}">
-                                <i class="fab fa-facebook me-2"></i> Post to Facebook
+                            <button class="dropdown-item post-to-telegram" data-business="{{ deal.business_name }}">
+                                <i class="fab fa-telegram me-2"></i> Post to Telegram
                             </button>
                         </li>
                         <li>
@@ -211,8 +214,8 @@
                         <i class="fas fa-map me-1"></i> Map
                     </a>
                     {% endif %}
-                    <button class="btn btn-sm btn-primary post-to-facebook" data-business="{{ deal.business_name }}">
-                        <i class="fab fa-facebook me-1"></i> Share
+                    <button class="btn btn-sm btn-primary post-to-telegram" data-business="{{ deal.business_name }}">
+                        <i class="fab fa-telegram me-1"></i> Share
                     </button>
                 </div>
             </div>
@@ -222,12 +225,12 @@
 </div>
 {% endif %}
 
-<!-- Facebook Post Modal -->
-<div class="modal fade" id="facebookPostModal" tabindex="-1" aria-labelledby="facebookPostModalLabel" aria-hidden="true">
+<!-- Telegram Post Modal -->
+<div class="modal fade" id="telegramPostModal" tabindex="-1" aria-labelledby="telegramPostModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="facebookPostModalLabel">Posting to Facebook</h5>
+                <h5 class="modal-title" id="telegramPostModalLabel">Posting to Telegram</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -236,7 +239,7 @@
                         <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
-                <p class="text-center mt-3" id="postingMessage">Posting to Facebook...</p>
+                <p class="text-center mt-3" id="postingMessage">Posting to Telegram...</p>
             </div>
         </div>
     </div>
@@ -246,9 +249,9 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Facebook posting functionality
-        const postButtons = document.querySelectorAll('.post-to-facebook');
-        const modal = new bootstrap.Modal(document.getElementById('facebookPostModal'));
+        // Telegram posting functionality
+        const postButtons = document.querySelectorAll('.post-to-telegram');
+        const modal = new bootstrap.Modal(document.getElementById('telegramPostModal'));
         const postingMessage = document.getElementById('postingMessage');
         
         // Search and filter functionality
@@ -280,24 +283,29 @@
                     dealDescription.includes(searchTerm) || 
                     location.includes(searchTerm);
                 
-                // Check if the deal matches the selected deal type
+                // Check if the deal matches the selected deal type - expanded to match server-side filtering
                 const matchesDealType = selectedDealType === '' || 
                     (selectedDealType === 'drink' && (
                         dealDescription.includes('beer') || 
                         dealDescription.includes('cocktail') || 
                         dealDescription.includes('drink') || 
                         dealDescription.includes('wine') ||
-                        dealDescription.includes('bier') ||
-                        dealDescription.includes('wein'))) ||
-                    (selectedDealType === 'food' && (
-                        dealDescription.includes('food') || 
-                        dealDescription.includes('appetizer') || 
-                        dealDescription.includes('taco') || 
-                        dealDescription.includes('wing') ||
-                        dealDescription.includes('pretzel') ||
-                        dealDescription.includes('currywurst'))) ||
-                    (selectedDealType === 'happy hour' && 
-                        dealDescription.toLowerCase().includes('happy hour'));
+                        dealDescription.includes('bier') || 
+                        dealDescription.includes('wein') ||
+                        dealDescription.includes('getränk') ||
+                        dealDescription.includes('pilsner') ||
+                        dealDescription.includes('draft') ||
+                        dealDescription.includes('weiße') ||
+                        dealDescription.includes('weinschorle') ||
+                        dealDescription.includes('shot') ||
+                        dealDescription.includes('pint') ||
+                        dealDescription.includes('für-1') ||
+                        dealDescription.includes('2-für-1'))) ||
+                    (selectedDealType === 'happy hour' && (
+                        dealDescription.toLowerCase().includes('happy hour') ||
+                        dealDescription.toLowerCase().includes('uhr:') ||
+                        dealDescription.toLowerCase().includes('pm:') ||
+                        dealDescription.toLowerCase().includes('am:')));
                 
                 // Show or hide the deal card based on the filters
                 if (matchesSearch && matchesDealType) {
@@ -339,16 +347,16 @@
             radio.addEventListener('change', filterDeals);
         });
         
-        // Facebook posting functionality
+        // Telegram posting functionality
         postButtons.forEach(button => {
             button.addEventListener('click', function() {
                 const businessName = this.getAttribute('data-business');
                 
                 // Show modal
-                postingMessage.textContent = `Posting deal for ${businessName} to Facebook...`;
+                postingMessage.textContent = `Posting deal for ${businessName} to Telegram...`;
                 modal.show();
                 
-                // Make API call to post to Facebook
+                // Make API call to post to Telegram
                 fetch('/post', {
                     method: 'POST',
                     headers: {
@@ -359,7 +367,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        postingMessage.innerHTML = `<div class="alert alert-success">Successfully posted to Facebook!</div>`;
+                        postingMessage.innerHTML = `<div class="alert alert-success">Successfully posted to Telegram!</div>`;
                         setTimeout(() => {
                             modal.hide();
                         }, 2000);

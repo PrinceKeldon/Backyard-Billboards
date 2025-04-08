@@ -2,11 +2,12 @@ import os
 import logging
 import time
 import urllib.parse
+import asyncio
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from db import DealDB
 from scraper import YelpScraper
-import facebook
+from telegram import Bot
 from dotenv import load_dotenv
 
 # Configure logging
@@ -39,6 +40,8 @@ deal_db = DealDB()
 last_request_time = 0
 MIN_REQUEST_INTERVAL = 2  # seconds
 
+# We'll handle data cleaning at query time instead of at startup
+
 def rate_limit():
     """Simple rate limiting function"""
     global last_request_time
@@ -53,13 +56,21 @@ def home():
     try:
         deals = deal_db.get_all_deals()
         
+        # Clean the dataset - filter out non-Berlin locations first
+        berlin_deals = []
+        for deal in deals:
+            location = deal.get('location', '').lower()
+            # Keep only deals with Berlin in the location or that have a district set
+            if 'berlin' in location or deal.get('district'):
+                berlin_deals.append(deal)
+        
         # Get filter parameters
         district = request.args.get('district', '')
         search_query = request.args.get('search', '')
         deal_type = request.args.get('deal_type', '')
         
-        # Start with all deals
-        filtered_deals = deals
+        # Start with Berlin-only deals
+        filtered_deals = berlin_deals
         
         # Filter by district if specified
         if district:
@@ -77,16 +88,18 @@ def home():
         # Filter by deal type if specified
         if deal_type:
             if deal_type == 'drink':
-                # Filter for drink deals
-                keywords = ['beer', 'cocktail', 'drink', 'wine', 'bier', 'wein', 'getränk', 'pilsner']
-                filtered_deals = [d for d in filtered_deals if any(keyword in d.get('deal', '').lower() for keyword in keywords)]
-            elif deal_type == 'food':
-                # Filter for food deals
-                keywords = ['food', 'appetizer', 'taco', 'wing', 'pretzel', 'currywurst', 'essen', 'speise', 'snack']
+                # Filter for drink deals - expanded keywords for better matching
+                keywords = ['beer', 'cocktail', 'drink', 'wine', 'bier', 'wein', 'getränk', 'pilsner', 
+                           'draft', 'weiße', 'weinschorle', 'pint', 'brew', 'alcohol', 'booze', 'spirits',
+                           'shot', 'für-1', '2-für-1', 'happy hour']
                 filtered_deals = [d for d in filtered_deals if any(keyword in d.get('deal', '').lower() for keyword in keywords)]
             elif deal_type == 'happy hour':
-                # Filter for explicit happy hour mentions
-                filtered_deals = [d for d in filtered_deals if 'happy hour' in d.get('deal', '').lower()]
+                # Filter for explicit happy hour mentions or time-specific deals
+                filtered_deals = [d for d in filtered_deals if 
+                                 'happy hour' in d.get('deal', '').lower() or 
+                                 'uhr:' in d.get('deal', '').lower() or
+                                 'pm:' in d.get('deal', '').lower() or
+                                 'am:' in d.get('deal', '').lower()]
         
         # Get all unique districts for the filter dropdown
         districts = sorted(list(set(d.get('district') for d in deals if d.get('district'))))
@@ -169,9 +182,47 @@ def scrape_deals():
     
     return redirect(url_for("home"))
 
+# Function to send message to Telegram
+async def send_telegram_message(message):
+    """Send a message via Telegram bot
+    
+    Args:
+        message (str): The message to send
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Get Telegram credentials from environment
+        token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+        
+        if not token or not chat_id:
+            logger.error("Telegram credentials not found")
+            return False
+        
+        # Initialize bot with token
+        bot = Bot(token=token)
+        
+        # Send message
+        await bot.send_message(chat_id=chat_id, text=message, parse_mode="HTML")
+        logger.info(f"Message sent to Telegram: {message}")
+        return True
+    except Exception as e:
+        logger.error(f"Error sending message to Telegram: {str(e)}")
+        return False
+
+def run_async(coroutine):
+    """Helper function to run async code in sync context"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    result = loop.run_until_complete(coroutine)
+    loop.close()
+    return result
+
 @app.route("/post", methods=["POST"])
-def post_to_facebook():
-    """Route to post deals to Facebook"""
+def post_to_telegram():
+    """Route to post deals to Telegram"""
     try:
         rate_limit()
         business_name = request.form.get("business_name")
@@ -184,29 +235,43 @@ def post_to_facebook():
         if not deal_data:
             return jsonify({"status": "error", "message": "Deal not found"}), 404
         
-        # Get Facebook access token from environment
-        fb_access_token = os.environ.get("FB_ACCESS_TOKEN")
+        # Check if Telegram credentials exist
+        token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID")
         
-        if not fb_access_token:
-            return jsonify({"status": "error", "message": "Facebook access token not found"}), 500
+        if not token or not chat_id:
+            return jsonify({"status": "error", "message": "Telegram credentials not found"}), 500
         
-        # Prepare the message
-        message = f"Check out this happy hour deal at {business_name}!\n\n"
-        message += f"Deal: {deal_data['deal']}\n"
-        message += f"Location: {deal_data['location']}\n"
-        message += f"\nPosted by Backyard Billboards"
+        # Prepare the message (with HTML formatting for Telegram)
+        message = f"<b>🍻 Happy Hour Deal at {business_name}!</b>\n\n"
+        message += f"<b>Deal:</b> {deal_data['deal']}\n"
+        message += f"<b>Location:</b> {deal_data['location']}\n"
         
-        # Post to Facebook
-        try:
-            graph = facebook.GraphAPI(access_token=fb_access_token)
-            graph.put_object(parent_object="me", connection_name="feed", message=message)
-            return jsonify({"status": "success", "message": "Posted to Facebook successfully"})
-        except facebook.GraphAPIError as e:
-            logger.error(f"Facebook API error: {str(e)}")
-            return jsonify({"status": "error", "message": f"Facebook API error: {str(e)}"}), 500
+        # Add district if available
+        if deal_data.get('district'):
+            message += f"<b>District:</b> {deal_data['district']}\n"
+        
+        # Add rating if available
+        if deal_data.get('rating'):
+            stars = "⭐" * int(deal_data['rating'])
+            message += f"<b>Rating:</b> {deal_data['rating']} {stars}\n"
+        
+        # Add Google Maps URL if available
+        if deal_data.get('google_maps_url'):
+            message += f"<a href='{deal_data['google_maps_url']}'>View on Google Maps</a>\n"
+            
+        message += f"\n<i>Posted by Backyard Billboards</i>"
+        
+        # Post to Telegram (run async function in sync context)
+        success = run_async(send_telegram_message(message))
+        
+        if success:
+            return jsonify({"status": "success", "message": "Posted to Telegram successfully"})
+        else:
+            return jsonify({"status": "error", "message": "Failed to post to Telegram"}), 500
         
     except Exception as e:
-        logger.error(f"Error posting to Facebook: {str(e)}")
+        logger.error(f"Error posting to Telegram: {str(e)}")
         return jsonify({"status": "error", "message": f"Error: {str(e)}"}), 500
 
 @app.route("/submit", methods=["GET", "POST"])
@@ -280,6 +345,19 @@ def delete_deal():
         logger.error(f"Error deleting deal: {str(e)}")
         flash(f"Error deleting deal: {str(e)}", "danger")
         return redirect(url_for("home"))
+
+@app.route("/clean-dataset", methods=["GET"])
+def clean_dataset():
+    """Route to clean the dataset - ensures all locations include Berlin"""
+    try:
+        from scraper import YelpScraper
+        cleaned_count = YelpScraper.clean_dataset()
+        flash(f"Successfully cleaned dataset! Updated {cleaned_count} deals to include Berlin in their location.", "success")
+    except Exception as e:
+        logger.error(f"Error cleaning dataset: {str(e)}")
+        flash(f"Error cleaning dataset: {str(e)}", "danger")
+    
+    return redirect(url_for("home"))
 
 @app.errorhandler(404)
 def page_not_found(e):

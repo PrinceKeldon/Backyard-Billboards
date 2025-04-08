@@ -502,7 +502,65 @@ class YelpScraper:
         return deals
     
     @staticmethod
-    def scrape(location="Austin", limit=5, enrich_with_google=False):
+    def clean_dataset():
+        """Cleans the dataset by ensuring all deals have Berlin in their location or a district set.
+        Also standardizes the locations to include Berlin if missing."""
+        from db import DealDB
+        deal_db = DealDB()
+        deals = deal_db.get_all_deals()
+        
+        # Log how many deals we're processing
+        logger.info(f"Cleaning {len(deals)} deals in the dataset...")
+        
+        cleaned_count = 0
+        for deal in deals:
+            business_name = deal.get('business_name')
+            location = deal.get('location', '')
+            district = deal.get('district')
+            
+            needs_update = False
+            
+            # Add Berlin to the location if it's missing and no district is set
+            if 'berlin' not in location.lower() and not district:
+                # Check if location has just a street name or is missing entirely
+                if location.strip() and not location.endswith(', '):
+                    location = f"{location}, Berlin"
+                else:
+                    location = f"{location}Berlin"
+                needs_update = True
+                
+            # If we have a district but no Berlin in the location, add Berlin
+            if district and 'berlin' not in location.lower():
+                if location.strip() and not location.endswith(', '):
+                    location = f"{location}, {district}, Berlin"
+                else:
+                    location = f"{location}{district}, Berlin"
+                needs_update = True
+            
+            # Update the deal if needed
+            if needs_update and business_name:
+                try:
+                    deal_data = deal_db.get_deal(business_name)
+                    if deal_data:
+                        # Update the location
+                        deal_data['location'] = location
+                        # Set has_accurate_location to True since we're adding Berlin
+                        deal_data['has_accurate_location'] = True
+                        # Set it back in the database
+                        deal_db.delete_deal(business_name)
+                        # Use all existing deal properties except the ones we're explicitly setting
+                        deal_props = {k: v for k, v in deal_data.items() if k not in ['business_name', 'deal', 'location', 'has_accurate_location']}
+                        deal_props['has_accurate_location'] = True
+                        deal_db.add_deal(business_name, deal_data['deal'], location, **deal_props)
+                        cleaned_count += 1
+                except Exception as e:
+                    logger.error(f"Error updating deal {business_name}: {str(e)}")
+        
+        logger.info(f"Cleaned {cleaned_count} deals in the dataset.")
+        return cleaned_count
+        
+    @staticmethod
+    def scrape(location="Berlin", limit=5, enrich_with_google=False):
         """
         Generate happy hour deals for the specified location
         
