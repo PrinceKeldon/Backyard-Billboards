@@ -28,8 +28,8 @@ class GoogleMapsScraper:
     MAX_ATTEMPTS = 3
     
     # Delay between requests (in seconds) to avoid rate limiting
-    MIN_DELAY = 2
-    MAX_DELAY = 5
+    MIN_DELAY = 0.5
+    MAX_DELAY = 1.5
     
     @staticmethod
     def get_random_delay():
@@ -37,7 +37,7 @@ class GoogleMapsScraper:
         return random.uniform(GoogleMapsScraper.MIN_DELAY, GoogleMapsScraper.MAX_DELAY)
     
     @staticmethod
-    def get_place_data(business_name, location, district=None):
+    def get_place_data(business_name, location, district=None, timeout=5.0):
         """
         Retrieve data for a place from Google Maps
         
@@ -45,6 +45,7 @@ class GoogleMapsScraper:
             business_name (str): Name of the business
             location (str): Address or location
             district (str, optional): District/neighborhood to improve search
+            timeout (float): Timeout for requests in seconds (default: 5.0)
             
         Returns:
             dict: Place data including rating, formatted address, etc.
@@ -82,7 +83,7 @@ class GoogleMapsScraper:
         
         for attempt in range(GoogleMapsScraper.MAX_ATTEMPTS):
             try:
-                response = requests.get(search_url, headers=GoogleMapsScraper.BASE_HEADERS, timeout=15)
+                response = requests.get(search_url, headers=GoogleMapsScraper.BASE_HEADERS, timeout=timeout)
                 
                 if response.status_code == 200:
                     # We've got a response, but Google Maps loads data dynamically with JavaScript
@@ -157,12 +158,13 @@ class GoogleMapsScraper:
         return place_data
     
     @staticmethod
-    def enrich_deal_data(deal):
+    def enrich_deal_data(deal, timeout=5.0):
         """
         Enrich a deal with Google Maps data
         
         Args:
             deal (dict): Deal data to enrich
+            timeout (float): Timeout for requests in seconds (default: 5.0)
             
         Returns:
             dict: Deal with enriched data
@@ -172,15 +174,15 @@ class GoogleMapsScraper:
             return deal
         
         try:
-            # Add a random delay to avoid rate limiting
-            time.sleep(GoogleMapsScraper.get_random_delay())
+            # Add a shorter, fixed delay to reduce execution time
+            time.sleep(0.5)  # Reduced for better performance
             
             # Get place data from Google Maps
             business_name = deal['business_name']
             location = deal['location']
             district = deal.get('district')
             
-            place_data = GoogleMapsScraper.get_place_data(business_name, location, district)
+            place_data = GoogleMapsScraper.get_place_data(business_name, location, district, timeout=timeout)
             
             # Enrich the deal with Google Maps data
             if place_data["found"]:

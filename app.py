@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Set application environment variables
-os.environ["ENABLE_GOOGLE_MAPS_SCRAPING"] = "true"  # Enable Google Maps scraping by default
-os.environ["GOOGLE_MAPS_ENRICHMENT_LIMIT"] = "5"    # Limit to 5 deals per request
+os.environ["ENABLE_GOOGLE_MAPS_SCRAPING"] = "true"  # Google Maps scraping enabled but needs to be opted into
+os.environ["GOOGLE_MAPS_ENRICHMENT_LIMIT"] = "2"    # Limit to 2 deals per request for better performance
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -49,24 +49,68 @@ def rate_limit():
 
 @app.route("/")
 def home():
-    """Home page route - displays all deals"""
+    """Home page route - displays all deals with filtering options"""
     try:
         deals = deal_db.get_all_deals()
         
-        # Get district filter if specified
-        district = request.args.get('district')
+        # Get filter parameters
+        district = request.args.get('district', '')
+        search_query = request.args.get('search', '')
+        deal_type = request.args.get('deal_type', '')
+        
+        # Start with all deals
+        filtered_deals = deals
+        
+        # Filter by district if specified
         if district:
-            # Filter deals by district
-            deals = [d for d in deals if d.get('district') and d.get('district').lower() == district.lower()]
+            filtered_deals = [d for d in filtered_deals if d.get('district') and d.get('district').lower() == district.lower()]
+        
+        # Filter by search term if specified
+        if search_query:
+            search_query = search_query.lower()
+            filtered_deals = [d for d in filtered_deals if 
+                search_query in d.get('business_name', '').lower() or 
+                search_query in d.get('deal', '').lower() or 
+                search_query in d.get('location', '').lower() or
+                (d.get('district') and search_query in d.get('district', '').lower())]
+        
+        # Filter by deal type if specified
+        if deal_type:
+            if deal_type == 'drink':
+                # Filter for drink deals
+                keywords = ['beer', 'cocktail', 'drink', 'wine', 'bier', 'wein', 'getränk', 'pilsner']
+                filtered_deals = [d for d in filtered_deals if any(keyword in d.get('deal', '').lower() for keyword in keywords)]
+            elif deal_type == 'food':
+                # Filter for food deals
+                keywords = ['food', 'appetizer', 'taco', 'wing', 'pretzel', 'currywurst', 'essen', 'speise', 'snack']
+                filtered_deals = [d for d in filtered_deals if any(keyword in d.get('deal', '').lower() for keyword in keywords)]
+            elif deal_type == 'happy hour':
+                # Filter for explicit happy hour mentions
+                filtered_deals = [d for d in filtered_deals if 'happy hour' in d.get('deal', '').lower()]
         
         # Get all unique districts for the filter dropdown
-        districts = sorted(list(set(d.get('district') for d in deal_db.get_all_deals() if d.get('district'))))
+        districts = sorted(list(set(d.get('district') for d in deals if d.get('district'))))
         
-        return render_template("index.html", deals=deals, districts=districts, current_district=district)
+        # Return the filtered deals with all filter parameters
+        return render_template(
+            "index.html", 
+            deals=filtered_deals, 
+            districts=districts, 
+            current_district=district,
+            search_query=search_query,
+            deal_type=deal_type
+        )
     except Exception as e:
         logger.error(f"Error retrieving deals: {str(e)}")
         flash(f"Error retrieving deals: {str(e)}", "danger")
-        return render_template("index.html", deals=[], districts=[], current_district=None)
+        return render_template(
+            "index.html", 
+            deals=[], 
+            districts=[], 
+            current_district=None,
+            search_query='',
+            deal_type=''
+        )
 
 @app.route("/scrape", methods=["POST"])
 def scrape_deals():

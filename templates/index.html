@@ -4,31 +4,73 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <h1 class="mb-4">
             <i class="fas fa-glass-martini-alt me-2"></i>
             Happy Hour Deals
         </h1>
     </div>
-    <div class="col-md-4">
-        <!-- District filter dropdown -->
-        {% if districts %}
-        <form action="{{ url_for('home') }}" method="GET" class="d-flex align-items-center h-100">
-            <div class="input-group">
-                <label class="input-group-text" for="districtFilter">
-                    <i class="fas fa-map-marker-alt"></i>
-                </label>
-                <select class="form-select" id="districtFilter" name="district" onchange="this.form.submit()">
-                    <option value="" {% if not current_district %}selected{% endif %}>All Districts</option>
-                    {% for district in districts %}
-                    <option value="{{ district }}" {% if current_district == district %}selected{% endif %}>{{ district }}</option>
-                    {% endfor %}
-                </select>
+    <div class="col-md-6">
+        <!-- Search and Filter Form -->
+        <form action="{{ url_for('home') }}" method="GET" id="searchFilterForm">
+            <div class="row g-2">
+                <!-- Search box -->
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="Search deals..." name="search" value="{{ search_query or '' }}">
+                    </div>
+                </div>
+                
+                <!-- District filter dropdown -->
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <label class="input-group-text" for="districtFilter">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </label>
+                        <select class="form-select" id="districtFilter" name="district">
+                            <option value="" {% if not current_district %}selected{% endif %}>All Districts</option>
+                            {% for district in districts %}
+                            <option value="{{ district }}" {% if current_district == district %}selected{% endif %}>{{ district }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Deal type filter buttons -->
+                <div class="col-12 mt-2">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="deal_type" id="all_deals" value="" autocomplete="off" {% if not deal_type %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="all_deals">All Deals</label>
+                        
+                        <input type="radio" class="btn-check" name="deal_type" id="drinks" value="drink" autocomplete="off" {% if deal_type == 'drink' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="drinks">Drinks</label>
+                        
+                        <input type="radio" class="btn-check" name="deal_type" id="food" value="food" autocomplete="off" {% if deal_type == 'food' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="food">Food</label>
+                        
+                        <input type="radio" class="btn-check" name="deal_type" id="happy_hour" value="happy hour" autocomplete="off" {% if deal_type == 'happy hour' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="happy_hour">Happy Hour</label>
+                    </div>
+                </div>
+                
+                <!-- Submit and reset buttons -->
+                <div class="col-12 mt-2">
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
+                    </div>
+                </div>
             </div>
         </form>
-        {% endif %}
     </div>
-    <div class="col-md-4 d-flex justify-content-md-end align-items-center">
+    <div class="col-md-3 d-flex justify-content-md-end align-items-center">
         <div class="dropdown me-2">
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="scrapeOptionsButton" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-cog"></i>
@@ -39,12 +81,12 @@
                     <input type="text" class="form-control" id="locationInput" name="location" placeholder="City (default: Berlin)">
                 </div>
                 <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="googleMapsCheck" name="use_google_maps" checked>
+                    <input class="form-check-input" type="checkbox" id="googleMapsCheck" name="use_google_maps">
                     <label class="form-check-label" for="googleMapsCheck">
                         Enrich with Google Maps data
                     </label>
                     <div class="form-text">
-                        <small>Adds ratings, reviews, and more accurate location data</small>
+                        <small>Adds ratings, reviews, and more accurate location data (slower)</small>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100">
@@ -203,13 +245,101 @@
 
 {% block scripts %}
 <script>
-    // Custom filter for templates
     document.addEventListener('DOMContentLoaded', function() {
         // Facebook posting functionality
         const postButtons = document.querySelectorAll('.post-to-facebook');
         const modal = new bootstrap.Modal(document.getElementById('facebookPostModal'));
         const postingMessage = document.getElementById('postingMessage');
         
+        // Search and filter functionality
+        const dealCards = document.querySelectorAll('.deal-card');
+        const searchInput = document.querySelector('input[name="search"]');
+        const dealTypeRadios = document.querySelectorAll('input[name="deal_type"]');
+        
+        // Function for client-side filtering (for quick searches without page reload)
+        function filterDeals() {
+            const searchTerm = searchInput.value.toLowerCase();
+            let selectedDealType = '';
+            
+            // Get the selected deal type
+            dealTypeRadios.forEach(radio => {
+                if (radio.checked) {
+                    selectedDealType = radio.value.toLowerCase();
+                }
+            });
+            
+            // Filter the deals based on search term and deal type
+            dealCards.forEach(card => {
+                const businessName = card.querySelector('.card-header h5').textContent.trim().toLowerCase();
+                const dealDescription = card.querySelector('.deal-description').textContent.trim().toLowerCase();
+                const location = card.querySelector('.card-text:nth-child(2)').textContent.trim().toLowerCase();
+                
+                // Check if the deal matches the search term
+                const matchesSearch = searchTerm === '' || 
+                    businessName.includes(searchTerm) || 
+                    dealDescription.includes(searchTerm) || 
+                    location.includes(searchTerm);
+                
+                // Check if the deal matches the selected deal type
+                const matchesDealType = selectedDealType === '' || 
+                    (selectedDealType === 'drink' && (
+                        dealDescription.includes('beer') || 
+                        dealDescription.includes('cocktail') || 
+                        dealDescription.includes('drink') || 
+                        dealDescription.includes('wine') ||
+                        dealDescription.includes('bier') ||
+                        dealDescription.includes('wein'))) ||
+                    (selectedDealType === 'food' && (
+                        dealDescription.includes('food') || 
+                        dealDescription.includes('appetizer') || 
+                        dealDescription.includes('taco') || 
+                        dealDescription.includes('wing') ||
+                        dealDescription.includes('pretzel') ||
+                        dealDescription.includes('currywurst'))) ||
+                    (selectedDealType === 'happy hour' && 
+                        dealDescription.toLowerCase().includes('happy hour'));
+                
+                // Show or hide the deal card based on the filters
+                if (matchesSearch && matchesDealType) {
+                    card.closest('.col').style.display = '';
+                } else {
+                    card.closest('.col').style.display = 'none';
+                }
+            });
+            
+            // Show a message if no deals match the filters
+            const visibleDeals = document.querySelectorAll('.deal-card:not([style*="display: none"])');
+            const noResultsMessage = document.getElementById('noResultsMessage');
+            
+            if (visibleDeals.length === 0 && dealCards.length > 0) {
+                if (!noResultsMessage) {
+                    const message = document.createElement('div');
+                    message.id = 'noResultsMessage';
+                    message.className = 'alert alert-info mt-3';
+                    message.innerHTML = `
+                        <h4 class="alert-heading">No matching deals found!</h4>
+                        <p>Try adjusting your search criteria or filters.</p>
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-undo me-1"></i> Reset Filters
+                        </a>
+                    `;
+                    document.querySelector('.row.row-cols-1').insertAdjacentElement('beforebegin', message);
+                }
+            } else if (noResultsMessage) {
+                noResultsMessage.remove();
+            }
+        }
+        
+        // Add event listeners for real-time filtering
+        if (searchInput) {
+            searchInput.addEventListener('input', filterDeals);
+        }
+        
+        dealTypeRadios.forEach(radio => {
+            radio.addEventListener('change', filterDeals);
+        });
+        
+        // Facebook posting functionality
         postButtons.forEach(button => {
             button.addEventListener('click', function() {
                 const businessName = this.getAttribute('data-business');
