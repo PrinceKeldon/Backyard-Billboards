@@ -72,13 +72,19 @@ def home():
     try:
         deals = deal_db.get_all_deals()
         
-        # Clean the dataset - filter out non-Berlin locations first
-        berlin_deals = []
+        # Clean the dataset - filter out non-Berlin locations and USD prices
+        filtered_deals = []
         for deal in deals:
             location = deal.get('location', '').lower()
+            deal_text = deal.get('deal', '')
+            
+            # Skip any deals with dollar sign ($) instead of Euro (€)
+            if '$' in deal_text:
+                continue
+                
             # Keep only deals with Berlin in the location or that have a district set
             if 'berlin' in location or deal.get('district'):
-                berlin_deals.append(deal)
+                filtered_deals.append(deal)
         
         # Get filter parameters
         district = request.args.get('district', '')
@@ -86,8 +92,7 @@ def home():
         deal_type = request.args.get('deal_type', '')
         # Removed sort_by parameter for simplified user experience
         
-        # Start with Berlin-only deals
-        filtered_deals = berlin_deals
+        # We're already using filtered_deals from above
         
         # Filter by district if specified
         if district:
@@ -119,7 +124,7 @@ def home():
                                  'am:' in d.get('deal', '').lower()]
         
         # Get all unique districts for the filter dropdown
-        districts = sorted(list(set(d.get('district') for d in deals if d.get('district'))))
+        districts = sorted(list(set(d.get('district') for d in filtered_deals if d.get('district'))))
         
         # First sort by district match (if district filter is active), then by date
         if district:
@@ -449,6 +454,39 @@ def clean_dataset():
         flash(f"Error cleaning dataset: {str(e)}", "danger")
     
     return redirect(url_for("home"))
+
+@app.route("/remove-dollar-prices", methods=["GET"])
+def remove_dollar_prices():
+    """Route to remove all deals with dollar sign ($) prices instead of Euro (€)"""
+    try:
+        deals = deal_db.get_all_deals()
+        deleted_count = 0
+        
+        for deal in deals:
+            business_name = deal.get('business_name')
+            deal_text = deal.get('deal', '').lower()
+            
+            # Skip if no business name
+            if not business_name:
+                continue
+            
+            # Check if this deal has dollar prices
+            if '$' in deal_text:
+                try:
+                    deal_db.delete_deal(business_name)
+                    deleted_count += 1
+                    logger.info(f"Deleted deal with dollar prices: {business_name} - {deal_text}")
+                except Exception as e:
+                    logger.error(f"Error deleting deal {business_name}: {str(e)}")
+        
+        logger.info(f"Removed {deleted_count} deals with dollar prices")
+        flash(f"Successfully removed {deleted_count} deals with dollar ($) prices", "success")
+        return redirect(url_for("home"))
+    
+    except Exception as e:
+        logger.error(f"Error removing dollar-priced deals: {str(e)}")
+        flash(f"Error removing dollar-priced deals: {str(e)}", "danger")
+        return redirect(url_for("home"))
 
 @app.route("/remove-austin-texas", methods=["GET"])
 def remove_austin_texas():
