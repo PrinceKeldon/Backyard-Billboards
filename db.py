@@ -74,9 +74,19 @@ class DealDB:
                     deal_data = self.db[business_name]
                     logger.debug(f"Deal data for {business_name}: {deal_data}")
                     
+                    # Replit DB returns ObservedDict objects
+                    # Convert to a regular dictionary if needed
+                    if hasattr(deal_data, "value"):
+                        deal_data = deal_data.value
+                        
                     # Skip if not a deal (in case other data is stored in the DB)
-                    if not isinstance(deal_data, dict) or "deal" not in deal_data:
-                        logger.debug(f"Skipping {business_name} as it's not a valid deal")
+                    if not isinstance(deal_data, dict):
+                        logger.debug(f"Skipping {business_name} as it's not a dictionary")
+                        continue
+                        
+                    # Check if it has the required fields
+                    if "deal" not in deal_data:
+                        logger.debug(f"Skipping {business_name} as it doesn't have a 'deal' field")
                         continue
                     
                     # Add business name to the deal data
