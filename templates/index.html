@@ -63,20 +63,7 @@
                     </div>
                 </div>
                 
-                <!-- Sort options -->
-                <div class="col-12 mt-2">
-                    <div class="btn-group w-100" role="group">
-                        <input type="radio" class="btn-check" name="sort" id="sort_date" value="date" autocomplete="off" {% if sort_by == 'date' or not sort_by %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="sort_date">
-                            <i class="fas fa-calendar-alt me-1"></i> Sort by Date
-                        </label>
-                        
-                        <input type="radio" class="btn-check" name="sort" id="sort_votes" value="votes" autocomplete="off" {% if sort_by == 'votes' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="sort_votes">
-                            <i class="fas fa-thumbs-up me-1"></i> Sort by Votes
-                        </label>
-                    </div>
-                </div>
+                <!-- Sort options removed for simplified UI -->
                 
                 <!-- Submit and reset buttons -->
                 <div class="col-12 mt-2">
@@ -240,9 +227,6 @@
                     </small>
                 </div>
                 <div>
-                    <a href="{{ url_for('view_deal', business_name=deal.business_name) }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-eye me-1"></i> View Deal
-                    </a>
                     {% if deal.has_accurate_location %}
                     <a href="https://www.google.com/maps/search/{{ deal.business_name|urlencode }}+{{ deal.location|urlencode }}" target="_blank" class="btn btn-sm btn-success me-1" title="View {{ deal.business_name }} on Google Maps">
                         <i class="fas fa-map me-1"></i> Map

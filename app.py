@@ -82,7 +82,7 @@ def home():
         district = request.args.get('district', '')
         search_query = request.args.get('search', '')
         deal_type = request.args.get('deal_type', '')
-        sort_by = request.args.get('sort', 'date')  # Default sort by date, can be 'votes' for sorting by votes
+        # Removed sort_by parameter for simplified user experience
         
         # Start with Berlin-only deals
         filtered_deals = berlin_deals
@@ -119,17 +119,8 @@ def home():
         # Get all unique districts for the filter dropdown
         districts = sorted(list(set(d.get('district') for d in deals if d.get('district'))))
         
-        # Sort the filtered deals based on the sort parameter
-        if sort_by == 'votes':
-            # Ensure each deal has a votes field (default to 0 if missing)
-            for deal in filtered_deals:
-                if 'votes' not in deal:
-                    deal['votes'] = 0
-            # Sort by votes (highest first)
-            filtered_deals = sorted(filtered_deals, key=lambda x: x.get("votes", 0), reverse=True)
-        else:
-            # Default sort by date (newest first)
-            filtered_deals = sorted(filtered_deals, key=lambda x: x.get("scraped_at", ""), reverse=True)
+        # Always sort by date (newest first) for simplified user experience
+        filtered_deals = sorted(filtered_deals, key=lambda x: x.get("scraped_at", ""), reverse=True)
         
         # Return the filtered deals with all filter parameters
         return render_template(
@@ -138,8 +129,7 @@ def home():
             districts=districts, 
             current_district=district,
             search_query=search_query,
-            deal_type=deal_type,
-            sort_by=sort_by
+            deal_type=deal_type
         )
     except Exception as e:
         logger.error(f"Error retrieving deals: {str(e)}")
@@ -150,8 +140,7 @@ def home():
             districts=[], 
             current_district=None,
             search_query='',
-            deal_type='',
-            sort_by='date'
+            deal_type=''
         )
 
 @app.route("/scrape", methods=["POST"])
@@ -442,7 +431,7 @@ def clean_dataset():
 @app.errorhandler(404)
 def page_not_found(e):
     """Handle 404 errors"""
-    return render_template("index.html", deals=[], error="Page not found", sort_by='date'), 404
+    return render_template("index.html", deals=[], error="Page not found"), 404
 
 @app.route("/deal/<business_name>")
 def view_deal(business_name):
@@ -582,16 +571,6 @@ def view_deal(business_name):
             except Exception as e:
                 logger.error(f"Error generating venue image: {str(e)}")
         
-        # Add necessary query parameters for social media preview
-        query_params = {
-            'business': decoded_name,
-            'deal': deal_data.get('deal', 'Happy Hour Deal'),
-            'location': deal_data.get('location', 'Berlin')
-        }
-        
-        if deal_data.get('district'):
-            query_params['district'] = deal_data.get('district')
-        
         # Return the deal detail template with all the gathered information
         return render_template(
             "deal_detail.html", 
@@ -599,8 +578,7 @@ def view_deal(business_name):
             venue_description=venue_description,
             venue_image=venue_image,
             venue_hours=venue_hours,
-            similar_deals=similar_deals,
-            **query_params
+            similar_deals=similar_deals
         )
     except Exception as e:
         logger.error(f"Error viewing deal: {str(e)}")
@@ -610,7 +588,7 @@ def view_deal(business_name):
 @app.errorhandler(500)
 def internal_server_error(e):
     """Handle 500 errors"""
-    return render_template("index.html", deals=[], error="Internal server error", sort_by='date'), 500
+    return render_template("index.html", deals=[], error="Internal server error"), 500
 
 def generate_venue_image(business_name, deal_text, location, district=None, rating=None):
     """
@@ -756,7 +734,7 @@ def generate_venue_image(business_name, deal_text, location, district=None, rati
         
         # Draw the semitransparent rectangle
         draw.rectangle(
-            [(100, deal_box_y), (width - 100, deal_box_y + deal_box_height)],
+            (100, deal_box_y, width - 100, deal_box_y + deal_box_height),
             fill=(0, 0, 0, 80),  # Semi-transparent black
             outline=(46, 196, 182),  # Teal accent color
             width=2
@@ -785,7 +763,7 @@ def generate_venue_image(business_name, deal_text, location, district=None, rati
             fill=(231, 111, 81)  # Accent color for icon
         )
         draw.rectangle(
-            [(icon_x + icon_size//4, icon_y + icon_size), (icon_x + 3*icon_size//4, icon_y + icon_size + 10)],
+            (icon_x + icon_size//4, icon_y + icon_size, icon_x + 3*icon_size//4, icon_y + icon_size + 10),
             fill=(231, 111, 81)  # Same accent color for stem
         )
         
