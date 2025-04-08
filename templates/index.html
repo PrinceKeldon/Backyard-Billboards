@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Backyard Billboards - Happy Hour Deals{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1 class="mb-4">
+            <i class="fas fa-glass-martini-alt me-2"></i>
+            Happy Hour Deals
+        </h1>
+    </div>
+    <div class="col-md-6 d-flex justify-content-md-end align-items-center">
+        <form action="{{ url_for('scrape_deals') }}" method="POST" class="d-flex">
+            <input type="text" name="location" class="form-control me-2" placeholder="City (default: Austin)" aria-label="Location">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search me-1"></i> Scrape Deals
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    {{ error }}
+</div>
+{% endif %}
+
+{% if not deals %}
+<div class="alert alert-info">
+    <h4 class="alert-heading">No deals found!</h4>
+    <p>There are currently no happy hour deals in our database. You can:</p>
+    <ul>
+        <li>Scrape for new deals using the button above</li>
+        <li><a href="{{ url_for('submit_deal') }}" class="alert-link">Submit a deal manually</a></li>
+    </ul>
+</div>
+{% else %}
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for deal in deals %}
+    <div class="col">
+        <div class="card h-100 deal-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-truncate" title="{{ deal.business_name }}">
+                    <i class="fas fa-store me-2"></i>
+                    {{ deal.business_name }}
+                </h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" id="dropdownMenuButton{{ loop.index }}" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ loop.index }}">
+                        <li>
+                            <button class="dropdown-item post-to-facebook" data-business="{{ deal.business_name }}">
+                                <i class="fab fa-facebook me-2"></i> Post to Facebook
+                            </button>
+                        </li>
+                        <li>
+                            <form action="{{ url_for('delete_deal') }}" method="POST" class="d-inline">
+                                <input type="hidden" name="business_name" value="{{ deal.business_name }}">
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="fas fa-trash-alt me-2"></i> Delete
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="card-text deal-description">
+                    <i class="fas fa-tag me-2 text-primary"></i>
+                    {{ deal.deal }}
+                </p>
+                <p class="card-text">
+                    <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                    {{ deal.location }}
+                </p>
+            </div>
+            <div class="card-footer text-muted d-flex justify-content-between align-items-center">
+                <small>
+                    <i class="far fa-clock me-1"></i>
+                    {% if deal.scraped_at %}
+                        Added {{ deal.scraped_at | to_time_ago }}
+                    {% else %}
+                        Recently added
+                    {% endif %}
+                </small>
+                <button class="btn btn-sm btn-primary post-to-facebook" data-business="{{ deal.business_name }}">
+                    <i class="fab fa-facebook me-1"></i> Share
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Facebook Post Modal -->
+<div class="modal fade" id="facebookPostModal" tabindex="-1" aria-labelledby="facebookPostModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="facebookPostModalLabel">Posting to Facebook</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="text-center mt-3" id="postingMessage">Posting to Facebook...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Custom filter for templates
+    document.addEventListener('DOMContentLoaded', function() {
+        // Facebook posting functionality
+        const postButtons = document.querySelectorAll('.post-to-facebook');
+        const modal = new bootstrap.Modal(document.getElementById('facebookPostModal'));
+        const postingMessage = document.getElementById('postingMessage');
+        
+        postButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const businessName = this.getAttribute('data-business');
+                
+                // Show modal
+                postingMessage.textContent = `Posting deal for ${businessName} to Facebook...`;
+                modal.show();
+                
+                // Make API call to post to Facebook
+                fetch('/post', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `business_name=${encodeURIComponent(businessName)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        postingMessage.innerHTML = `<div class="alert alert-success">Successfully posted to Facebook!</div>`;
+                        setTimeout(() => {
+                            modal.hide();
+                        }, 2000);
+                    } else {
+                        postingMessage.innerHTML = `<div class="alert alert-danger">Error: ${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    postingMessage.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

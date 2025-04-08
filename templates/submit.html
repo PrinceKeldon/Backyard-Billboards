@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Submit a Deal - Backyard Billboards{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="h4 mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Submit a New Happy Hour Deal
+                </h1>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('submit_deal') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="business_name" class="form-label">Business Name</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-store"></i>
+                            </span>
+                            <input type="text" class="form-control" id="business_name" name="business_name" 
+                                placeholder="e.g., The Rustic Tap" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="deal" class="form-label">Happy Hour Deal</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-tag"></i>
+                            </span>
+                            <input type="text" class="form-control" id="deal" name="deal" 
+                                placeholder="e.g., Happy Hour 4-7PM: $3 beers, $5 well drinks" required>
+                        </div>
+                        <div class="form-text">Describe the happy hour deal, including times and prices.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </span>
+                            <input type="text" class="form-control" id="location" name="location" 
+                                placeholder="e.g., 123 Main St, Austin" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('home') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Submit Deal
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer">
+                <p class="mb-0 text-muted">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Your submission will be added to our database immediately and will appear on the homepage.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
