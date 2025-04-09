@@ -135,9 +135,10 @@
                             <i class="fas fa-globe me-2"></i> Visit Website
                         </a>
                         
-                        <button class="btn btn-outline-info post-to-telegram" data-business="{{ deal.business_name }}">
-                            <i class="fab fa-telegram me-2"></i> Share on Telegram
-                        </button>
+                        <!-- Telegram button removed for simplified deployment -->
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Back to Deals
+                        </a>
                         
                         <div class="dropdown">
                             <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="shareDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -251,34 +252,13 @@
     </div>
 </div>
 
-<!-- Telegram Post Modal -->
-<div class="modal fade" id="telegramPostModal" tabindex="-1" aria-labelledby="telegramPostModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="telegramPostModalLabel">Posting to Telegram</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex justify-content-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-                <p class="text-center mt-3" id="postingMessage">Posting to Telegram...</p>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Telegram modal removed for simplified deployment -->
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Telegram posting functionality
-        const postButtons = document.querySelectorAll('.post-to-telegram');
-        const modal = new bootstrap.Modal(document.getElementById('telegramPostModal'));
-        const postingMessage = document.getElementById('postingMessage');
+        // Telegram posting functionality removed for simplified deployment
         
         // Upvote functionality
         const upvoteButtons = document.querySelectorAll('.upvote-btn');
@@ -331,39 +311,7 @@
             });
         });
         
-        // Telegram posting functionality
-        postButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const businessName = this.getAttribute('data-business');
-                
-                // Show modal
-                postingMessage.textContent = `Posting deal for ${businessName} to Telegram...`;
-                modal.show();
-                
-                // Make API call to post to Telegram
-                fetch('/post', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `business_name=${encodeURIComponent(businessName)}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        postingMessage.innerHTML = `<div class="alert alert-success">Successfully posted to Telegram!</div>`;
-                        setTimeout(() => {
-                            modal.hide();
-                        }, 2000);
-                    } else {
-                        postingMessage.innerHTML = `<div class="alert alert-danger">Error: ${data.message}</div>`;
-                    }
-                })
-                .catch(error => {
-                    postingMessage.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-                });
-            });
-        });
+        // Telegram posting functionality removed for simplified deployment
     });
 </script>
 {% endblock %}

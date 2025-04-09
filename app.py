@@ -2,7 +2,6 @@ import os
 import logging
 import time
 import urllib.parse
-import asyncio
 import io
 import random
 import base64
@@ -11,7 +10,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from db import DealDB
 from scraper import YelpScraper
 from google_maps_scraper import GoogleMapsScraper
-from telegram import Bot
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 import trafilatura
@@ -227,97 +225,7 @@ def scrape_deals():
     
     return redirect(url_for("home"))
 
-# Function to send message to Telegram
-async def send_telegram_message(message):
-    """Send a message via Telegram bot
-    
-    Args:
-        message (str): The message to send
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    try:
-        # Get Telegram credentials from environment
-        token = os.environ.get("TELEGRAM_BOT_TOKEN")
-        chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-        
-        if not token or not chat_id:
-            logger.error("Telegram credentials not found")
-            return False
-        
-        # Initialize bot with token
-        bot = Bot(token=token)
-        
-        # Send message
-        await bot.send_message(chat_id=chat_id, text=message, parse_mode="HTML")
-        logger.info(f"Message sent to Telegram: {message}")
-        return True
-    except Exception as e:
-        logger.error(f"Error sending message to Telegram: {str(e)}")
-        return False
-
-def run_async(coroutine):
-    """Helper function to run async code in sync context"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    result = loop.run_until_complete(coroutine)
-    loop.close()
-    return result
-
-@app.route("/post", methods=["POST"])
-def post_to_telegram():
-    """Route to post deals to Telegram"""
-    try:
-        rate_limit()
-        business_name = request.form.get("business_name")
-        
-        if not business_name:
-            return jsonify({"status": "error", "message": "Business name is required"}), 400
-        
-        deal_data = deal_db.get_deal(business_name)
-        
-        if not deal_data:
-            return jsonify({"status": "error", "message": "Deal not found"}), 404
-        
-        # Check if Telegram credentials exist
-        token = os.environ.get("TELEGRAM_BOT_TOKEN")
-        chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-        
-        if not token or not chat_id:
-            return jsonify({"status": "error", "message": "Telegram credentials not found"}), 500
-        
-        # Prepare the message (with HTML formatting for Telegram)
-        message = f"<b>🍻 Happy Hour Deal at {business_name}!</b>\n\n"
-        message += f"<b>Deal:</b> {deal_data['deal']}\n"
-        message += f"<b>Location:</b> {deal_data['location']}\n"
-        
-        # Add district if available
-        if deal_data.get('district'):
-            message += f"<b>District:</b> {deal_data['district']}\n"
-        
-        # Add rating if available
-        if deal_data.get('rating'):
-            stars = "⭐" * int(deal_data['rating'])
-            message += f"<b>Rating:</b> {deal_data['rating']} {stars}\n"
-        
-        # Add Google Maps URL if available
-        if deal_data.get('google_maps_url'):
-            message += f"<a href='{deal_data['google_maps_url']}'>View on Google Maps</a>\n"
-            
-        message += f"\n<i>Posted by Backyard Billboards</i>"
-        
-        # Post to Telegram (run async function in sync context)
-        success = run_async(send_telegram_message(message))
-        
-        if success:
-            return jsonify({"status": "success", "message": "Posted to Telegram successfully"})
-        else:
-            return jsonify({"status": "error", "message": "Failed to post to Telegram"}), 500
-        
-    except Exception as e:
-        logger.error(f"Error posting to Telegram: {str(e)}")
-        return jsonify({"status": "error", "message": f"Error: {str(e)}"}), 500
+# Telegram functionality has been removed to simplify deployment
 
 @app.route("/submit", methods=["GET", "POST"])
 def submit_deal():

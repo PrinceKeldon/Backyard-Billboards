@@ -9,3 +9,5 @@ beautifulsoup4==4.12.2
 flask-sqlalchemy
 psycopg2-binary
 email-validator
+replit
+telegram
