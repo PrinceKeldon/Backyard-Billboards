@@ -38,6 +38,16 @@
     color-scheme: light;
 }
 
+/* Additional light mode fixes */
+[data-bs-theme="light"] .btn-outline-light {
+    color: var(--bb-dark);
+    border-color: var(--bb-dark);
+}
+
+[data-bs-theme="light"] .text-muted {
+    color: #505050 !important;
+}
+
 /* Dark mode overrides */
 [data-bs-theme="dark"] {
     --bs-body-bg: var(--bb-dark);
@@ -456,6 +466,21 @@ h1, h2, h3, h4, h5, h6 {
 .section-header i {
     width: 30px;
     text-align: center;
+}
+
+/* Ensure all section headers have white text in both modes */
+[data-bs-theme="light"] .section-header,
+[data-bs-theme="dark"] .section-header {
+    color: white !important;
+}
+
+[data-bs-theme="light"] .section-header h1,
+[data-bs-theme="light"] .section-header h2,
+[data-bs-theme="light"] .section-header h3,
+[data-bs-theme="light"] .section-header h4,
+[data-bs-theme="light"] .section-header h5,
+[data-bs-theme="light"] .section-header h6 {
+    color: white !important;
 }
 
 /* Ensure contrast in light mode */

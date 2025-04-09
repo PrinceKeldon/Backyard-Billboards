@@ -566,7 +566,7 @@ def view_deal(business_name):
         if not venue_description and deal_data.get('place_type'):
             venue_description = f"A {deal_data.get('place_type')} with special happy hour offers. Located in {deal_data.get('district', 'Berlin')}."
         
-        # Look for similar deals (same district or nearby)
+        # Look for similar deals (strictly showing only same district)
         try:
             all_deals = deal_db.get_all_deals()
             
@@ -577,26 +577,18 @@ def view_deal(business_name):
                 if 'berlin' in location or deal.get('district'):
                     berlin_deals.append(deal)
                     
-            # Find deals in the same district
+            # Find deals in the same district - ONLY show deals from the same district
+            similar_deals = []
             if deal_data.get('district'):
                 district_deals = [d for d in berlin_deals if 
                                  d.get('district') == deal_data.get('district') and 
                                  d.get('business_name') != decoded_name]
                 
-                # Get up to 4 similar deals
+                # Get up to 4 similar deals from the same district only
                 similar_deals = district_deals[:4]
             
-            # If we don't have enough similar deals, add some random ones
-            if len(similar_deals) < 2:
-                random_deals = [d for d in berlin_deals if 
-                               d.get('business_name') != decoded_name and 
-                               d not in similar_deals]
-                
-                # Shuffle to get random selection
-                random.shuffle(random_deals)
-                
-                # Add random deals up to a total of 4 similar deals
-                similar_deals.extend(random_deals[:4 - len(similar_deals)])
+            # We no longer show random deals from other districts
+            # If there are no other deals in this district, the section won't show
         except Exception as e:
             logger.error(f"Error getting similar deals: {str(e)}")
             
