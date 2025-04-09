@@ -34,6 +34,8 @@
     --bs-navbar-color: var(--bb-dark);
     --bs-link-color: var(--bb-primary);
     --bs-link-hover-color: #a93344;
+    /* Override white text in light mode with dark text */
+    color-scheme: light;
 }
 
 /* Dark mode overrides */
@@ -388,6 +390,20 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+/* Reset button animation */
+.reset-btn-animation {
+    animation: spinReset 0.5s ease;
+}
+
+@keyframes spinReset {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 /* Deal detail page styling */
 .deal-image-container {
     position: relative;
@@ -398,6 +414,53 @@ h1, h2, h3, h4, h5, h6 {
 .deal-highlight {
     background: linear-gradient(to right, rgba(139, 38, 53, 0.1), rgba(46, 196, 182, 0.1));
     border-left: 4px solid var(--bb-primary);
+}
+
+/* Deal detail page improvements */
+.card-header.text-white {
+    color: white !important;
+}
+
+/* Light mode improvements for detail page */
+[data-bs-theme="light"] .card-header.text-white h1,
+[data-bs-theme="light"] .card-header.text-white h2,
+[data-bs-theme="light"] .card-header.text-white h3, 
+[data-bs-theme="light"] .card-header.text-white h4,
+[data-bs-theme="light"] .card-header.text-white h5,
+[data-bs-theme="light"] .card-header.text-white h6 {
+    color: white !important;
+}
+
+/* Improved sidebar styling */
+.deal-info-sidebar h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    background-color: var(--bs-secondary);
+    color: white !important;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+/* Section headers in deal detail */
+.section-header {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, var(--bs-info), var(--bs-primary));
+    color: white !important;
+    border-radius: 5px;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.section-header i {
+    width: 30px;
+    text-align: center;
+}
+
+/* Ensure contrast in light mode */
+[data-bs-theme="light"] .text-white {
+    color: white !important;  
 }
 
 .text-shadow {

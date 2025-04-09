@@ -71,7 +71,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary" id="reset-filters-btn">
                             <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
@@ -298,6 +298,21 @@
         const postButtons = document.querySelectorAll('.post-to-telegram');
         const modal = new bootstrap.Modal(document.getElementById('telegramPostModal'));
         const postingMessage = document.getElementById('postingMessage');
+        
+        // Reset button animation
+        const resetButton = document.getElementById('reset-filters-btn');
+        if (resetButton) {
+            resetButton.addEventListener('click', function(e) {
+                // Add the animation class to the button's icon
+                const resetIcon = this.querySelector('i.fa-undo');
+                resetIcon.classList.add('reset-btn-animation');
+                
+                // Remove the animation class after the animation completes
+                setTimeout(function() {
+                    resetIcon.classList.remove('reset-btn-animation');
+                }, 500);
+            });
+        }
         
         // Search and filter functionality
         const dealCards = document.querySelectorAll('.deal-card');

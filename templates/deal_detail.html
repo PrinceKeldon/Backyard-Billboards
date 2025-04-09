@@ -35,10 +35,9 @@
                 <div class="card-body p-4">
                     <!-- Deal information -->
                     <div class="mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-glass-martini-alt fs-4 text-primary me-2"></i>
-                            <h2 class="fs-4 mb-0">Happy Hour Deal</h2>
-                        </div>
+                        <h2 class="section-header">
+                            <i class="fas fa-glass-martini-alt"></i> Happy Hour Deal
+                        </h2>
                         <p class="lead p-3 rounded" style="background-color: rgba(var(--bs-primary-rgb), 0.05);">
                             {{ deal.deal }}
                         </p>
@@ -60,10 +59,9 @@
                     
                     <!-- Location information -->
                     <div class="mb-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <i class="fas fa-map-marker-alt fs-4 text-danger me-2"></i>
-                            <h2 class="fs-4 mb-0">Location</h2>
-                        </div>
+                        <h2 class="section-header">
+                            <i class="fas fa-map-marker-alt"></i> Location
+                        </h2>
                         <p>{{ deal.location }}</p>
                         {% if deal.district %}
                         <div class="mb-2">
@@ -76,10 +74,9 @@
                     {% if venue_description %}
                     <hr>
                     <div class="mb-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <i class="fas fa-info-circle fs-4 text-info me-2"></i>
-                            <h2 class="fs-4 mb-0">About</h2>
-                        </div>
+                        <h2 class="section-header">
+                            <i class="fas fa-info-circle"></i> About
+                        </h2>
                         <p>{{ venue_description }}</p>
                     </div>
                     {% endif %}
@@ -88,10 +85,9 @@
                     {% if venue_hours %}
                     <hr>
                     <div class="mb-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <i class="far fa-clock fs-4 text-success me-2"></i>
-                            <h2 class="fs-4 mb-0">Opening Hours</h2>
-                        </div>
+                        <h2 class="section-header">
+                            <i class="far fa-clock"></i> Opening Hours
+                        </h2>
                         <div class="row">
                             {% for day, hours in venue_hours.items() %}
                             <div class="col-md-6 mb-1">
@@ -106,10 +102,9 @@
                     {% if deal.place_type or deal.price_level %}
                     <hr>
                     <div class="mb-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <i class="fas fa-info-circle fs-4 text-primary me-2"></i>
-                            <h2 class="fs-4 mb-0">Business Details</h2>
-                        </div>
+                        <h2 class="section-header">
+                            <i class="fas fa-info-circle"></i> Business Details
+                        </h2>
                         <div class="row">
                             {% if deal.place_type %}
                             <div class="col-md-6 mb-2">
@@ -175,10 +170,9 @@
                     <!-- Similar deals -->
                     {% if similar_deals %}
                     <div class="mt-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <i class="fas fa-map-signs fs-4 text-success me-2"></i>
-                            <h2 class="fs-4 mb-0">Similar Deals Nearby</h2>
-                        </div>
+                        <h2 class="section-header">
+                            <i class="fas fa-map-signs"></i> Similar Deals Nearby
+                        </h2>
                         <div class="list-group">
                             {% for similar in similar_deals[:3] %}
                             <a href="{{ url_for('view_deal', business_name=similar.business_name) }}" class="list-group-item list-group-item-action">
@@ -218,12 +212,12 @@
                     </div>
                     {% endif %}
                     
-                    <div class="p-3">
-                        <h4 class="fs-5 mb-3">Deal Information</h4>
+                    <div class="p-3 deal-info-sidebar">
+                        <h4 class="text-white mb-3">Deal Information</h4>
                         {% if deal.rating %}
                         <p class="mb-2">
                             <i class="fas fa-star me-2 text-warning"></i>
-                            Rating: 
+                            <strong>Rating:</strong> 
                             <span class="text-warning">
                                 {% for i in range(deal.rating|int) %}★{% endfor %}
                                 {% if deal.rating|int < deal.rating %}½{% endif %}
@@ -235,20 +229,20 @@
                         {% if deal.district %}
                         <p class="mb-2">
                             <i class="fas fa-map me-2 text-primary"></i>
-                            District: {{ deal.district }}
+                            <strong>District:</strong> {{ deal.district }}
                         </p>
                         {% endif %}
                         
                         {% if deal.place_type %}
                         <p class="mb-2">
                             <i class="fas fa-store me-2 text-secondary"></i>
-                            Type: {{ deal.place_type }}
+                            <strong>Type:</strong> {{ deal.place_type }}
                         </p>
                         {% endif %}
                         
                         <p class="mb-2">
                             <i class="far fa-calendar-alt me-2 text-info"></i>
-                            Added: {{ deal.scraped_at }}
+                            <strong>Added:</strong> {{ deal.scraped_at }}
                         </p>
                     </div>
                 </div>
