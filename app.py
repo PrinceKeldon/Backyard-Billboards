@@ -541,10 +541,7 @@ def remove_austin_texas():
         flash(f"Error removing Austin locations: {str(e)}", "danger")
         return redirect(url_for("home"))
 
-@app.errorhandler(404)
-def page_not_found(e):
-    """Handle 404 errors"""
-    return render_template("index.html", deals=[], error="Page not found"), 404
+# Note: We've already defined page_not_found handler earlier
 
 @app.route("/ai-recommendation", methods=["POST"])
 def ai_recommendation():
