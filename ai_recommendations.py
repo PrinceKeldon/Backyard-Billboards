@@ -11,17 +11,48 @@ from openai import OpenAI
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-openai = None
-if OPENAI_API_KEY:
-    try:
+# Initialize OpenAI client in a way that doesn't crash the application
+try:
+    # Get API key from environment
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+    
+    # Initialize the client
+    if OPENAI_API_KEY:
         openai = OpenAI(api_key=OPENAI_API_KEY)
         logger.info("OpenAI client initialized successfully")
+    else:
+        # Use a dummy client that will be reinitialized later if the key becomes available
+        openai = None
+        logger.warning("OPENAI_API_KEY not found in environment variables")
+        
+except Exception as e:
+    openai = None
+    logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+
+# Function to get or recreate the OpenAI client
+def get_openai_client():
+    """Get the OpenAI client, recreating it if necessary"""
+    global openai, OPENAI_API_KEY
+    
+    # If we already have a client, return it
+    if openai is not None:
+        return openai
+        
+    # Try to recreate the client
+    try:
+        # Check if the API key is in the environment
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key:
+            # Update the global variables
+            OPENAI_API_KEY = api_key
+            openai = OpenAI(api_key=api_key)
+            logger.info("OpenAI client reinitialized successfully")
+            return openai
     except Exception as e:
-        logger.error(f"Failed to initialize OpenAI client: {str(e)}")
-else:
-    logger.warning("OPENAI_API_KEY not found in environment variables")
+        logger.error(f"Failed to reinitialize OpenAI client: {str(e)}")
+    
+    # If we get here, we couldn't create a client
+    return None
 
 def get_ai_recommendation(user_preferences, deals):
     """
@@ -81,7 +112,14 @@ def get_ai_recommendation(user_preferences, deals):
         # Get recommendation from OpenAI
         # The newest OpenAI model is "gpt-4o" which was released May 13, 2024.
         # Do not change this unless explicitly requested by the user
-        response = openai.chat.completions.create(
+        
+        # Get or create the OpenAI client
+        client = get_openai_client()
+        if not client:
+            logger.error("OpenAI client is not initialized or API key is missing")
+            raise ValueError("OpenAI API key is missing. Cannot generate recommendations.")
+            
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "system", "content": "You are an AI recommendation engine specializing in Berlin's bar and restaurant scene."},
                      {"role": "user", "content": prompt}],
@@ -158,7 +196,14 @@ def get_venue_description(business_name, deal_text, district, place_type):
         
         # The newest OpenAI model is "gpt-4o" which was released May 13, 2024.
         # Do not change this unless explicitly requested by the user
-        response = openai.chat.completions.create(
+        
+        # Get or create the OpenAI client
+        client = get_openai_client()
+        if not client:
+            logger.error("OpenAI client is not initialized or API key is missing")
+            raise ValueError("OpenAI API key is missing. Cannot generate venue description.")
+            
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "system", "content": "You are a creative writer specializing in Berlin's nightlife scene."},
                      {"role": "user", "content": prompt}],
