@@ -398,7 +398,7 @@ def remove_dollar_prices():
         flash(f"Error removing dollar-priced deals: {str(e)}", "danger")
         return redirect(url_for("home"))
 
-@app.route("/fix-currency-placeholders", methods=["GET"])
+@app.route("/fix-currency", methods=["GET"])
 def fix_currency_placeholders():
     """Route to fix currency placeholders in deal texts, replacing {currency} with € symbol"""
     try:
@@ -462,6 +462,69 @@ def fix_currency_placeholders():
         flash(f"Error fixing currency placeholders: {str(e)}", "danger")
         return redirect(url_for("home"))
 
+@app.route("/fix-currency", methods=["GET"])
+def fix_currency_placeholders():
+    """Route to fix currency placeholders in deal texts, replacing {currency} with € symbol"""
+    try:
+        deals = deal_db.get_all_deals()
+        fixed_count = 0
+        
+        for deal in deals:
+            business_name = deal.get('business_name')
+            deal_text = deal.get('deal', '')
+            
+            # Skip if no business name
+            if not business_name:
+                continue
+            
+            # Check if this deal has currency placeholders
+            if '{currency}' in deal_text:
+                try:
+                    # Get all properties to preserve
+                    location = deal.get('location', '')
+                    district = deal.get('district')
+                    has_accurate_location = deal.get('has_accurate_location', False)
+                    rating = deal.get('rating')
+                    reviews_count = deal.get('reviews_count')
+                    place_type = deal.get('place_type')
+                    price_level = deal.get('price_level')
+                    google_maps_url = deal.get('google_maps_url')
+                    votes = deal.get('votes', 0)
+                    scraped_at = deal.get('scraped_at')
+                    
+                    # Create the updated deal text
+                    updated_deal_text = deal_text.replace('{currency}', '€')
+                    
+                    # Delete and recreate the deal with the updated text
+                    deal_db.delete_deal(business_name)
+                    deal_db.add_deal(
+                        business_name=business_name, 
+                        deal=updated_deal_text,
+                        location=location,
+                        district=district,
+                        has_accurate_location=has_accurate_location,
+                        rating=rating,
+                        reviews_count=reviews_count,
+                        place_type=place_type,
+                        price_level=price_level,
+                        google_maps_url=google_maps_url,
+                        votes=votes,
+                        scraped_at=scraped_at
+                    )
+                    
+                    fixed_count += 1
+                    logger.info(f"Fixed currency in deal: {business_name} - {deal_text} -> {updated_deal_text}")
+                except Exception as e:
+                    logger.error(f"Error fixing currency for deal {business_name}: {str(e)}")
+        
+        logger.info(f"Fixed {fixed_count} deals with currency placeholders")
+        flash(f"Successfully fixed {fixed_count} deals with currency placeholders", "success")
+        return redirect(url_for("home"))
+    
+    except Exception as e:
+        logger.error(f"Error fixing currency placeholders: {str(e)}")
+        flash(f"Error fixing currency placeholders: {str(e)}", "danger")
+        return redirect(url_for("home"))
 
 @app.route("/remove-austin-texas", methods=["GET"])
 def remove_austin_texas():
