@@ -33,6 +33,11 @@ os.environ["RESTRICT_TO_BERLIN"] = "true"           # Flag to restrict all resul
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "backyard-billboards-local-dev-secret-key")
 
+# Import and register Jinja filters
+from utils import get_time_ago
+app.jinja_env.filters['to_time_ago'] = get_time_ago
+logging.getLogger(__name__).info("Successfully registered Jinja filters")
+
 # Configure error handling
 @app.errorhandler(Exception)
 def handle_exception(e):
