@@ -702,6 +702,39 @@ def integrate_external_data(deals, api_type=None):
     Args:
         deals (list): List of deals to enrich
         api_type (str): Type of API to use ('foursquare', 'yelp', etc.)
+        
+    Returns:
+        list: List of enriched deals
+    """
+    try:
+        # Handle rate limiting and API quotas
+        if len(deals) > 10:
+            logger.warning("Limiting external API enrichment to 10 deals")
+            deals_to_enrich = deals[:10]
+        else:
+            deals_to_enrich = deals
+            
+        for deal in deals_to_enrich:
+            # Add venue popularity data
+            if deal.get('has_accurate_location'):
+                # Add a delay between requests
+                time.sleep(0.5)
+                
+                # Enrich with Google Maps data first
+                if os.environ.get("ENABLE_GOOGLE_MAPS_SCRAPING", "").lower() in ("true", "1", "yes"):
+                    deal = GoogleMapsScraper.enrich_deal_data(deal, timeout=3.0)
+                
+                # Then add custom enrichment based on api_type
+                if api_type == 'foursquare':
+                    # Example structure for Foursquare integration
+                    deal['popularity_score'] = random.randint(70, 100)
+                    deal['peak_hours'] = f"{random.randint(17,19)}:00-{random.randint(20,22)}:00"
+                    
+        return deals
+        
+    except Exception as e:
+        logger.error(f"Error enriching deals with external data: {str(e)}")
+        return deals
 
 
 @staticmethod
@@ -747,40 +780,6 @@ def scrape_verified_sources(district=None):
     except Exception as e:
         logger.error(f"Error scraping verified sources: {str(e)}")
         return []
-
-        
-    Returns:
-        list: Enriched deals
-    """
-    try:
-        # Handle rate limiting and API quotas
-        if len(deals) > 10:
-            logger.warning("Limiting external API enrichment to 10 deals")
-            deals_to_enrich = deals[:10]
-        else:
-            deals_to_enrich = deals
-            
-        for deal in deals_to_enrich:
-            # Add venue popularity data
-            if deal.get('has_accurate_location'):
-                # Add a delay between requests
-                time.sleep(0.5)
-                
-                # Enrich with Google Maps data first
-                if os.environ.get("ENABLE_GOOGLE_MAPS_SCRAPING", "").lower() in ("true", "1", "yes"):
-                    deal = GoogleMapsScraper.enrich_deal_data(deal, timeout=3.0)
-                
-                # Then add custom enrichment based on api_type
-                if api_type == 'foursquare':
-                    # Example structure for Foursquare integration
-                    deal['popularity_score'] = random.randint(70, 100)
-                    deal['peak_hours'] = f"{random.randint(17,19)}:00-{random.randint(20,22)}:00"
-                    
-        return deals
-        
-    except Exception as e:
-        logger.error(f"Error enriching deals with external data: {str(e)}")
-        return deals
 
 
 @staticmethod
