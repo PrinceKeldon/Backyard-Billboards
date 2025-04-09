@@ -681,7 +681,7 @@ class YelpScraper:
             # Enrich deals with external data if requested
             if enrich_with_google:
                 logger.debug("Enriching deals with external data")
-                deals = YelpScraper.integrate_external_data(deals, api_type='foursquare')
+                deals = integrate_external_data(deals, api_type='foursquare')
             
             logger.debug(f"Generated {len(deals)} deals for {location}")
             return deals
