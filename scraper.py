@@ -647,7 +647,7 @@ class YelpScraper:
         return cleaned_count + deleted_count
         
     @staticmethod
-    def scrape(location=None, limit=5, enrich_with_google=False, use_verified_sources=True):
+    def scrape(location=None, limit=5, enrich_with_google=False, use_verified_sources=True, use_agent=True):
         """
         Generate happy hour deals for the specified location
         
@@ -686,7 +686,14 @@ class YelpScraper:
                 logger.debug("Enriching deals with external data")
                 deals = integrate_external_data(deals, api_type='foursquare')
             
-            logger.debug(f"Generated {len(deals)} deals for {location}")
+            # Add agent scraper results if enabled
+            if use_agent:
+                from agent_scraper import AgentScraper
+                agent_deals = AgentScraper.scrape(location, limit)
+                deals.extend(agent_deals)
+                logger.debug(f"Added {len(agent_deals)} deals from agent scraper")
+                
+            logger.debug(f"Generated {len(deals)} total deals for {location}")
             return deals
             
         except Exception as e:
