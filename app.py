@@ -562,71 +562,9 @@ def view_deal(business_name):
         venue_hours = None
         similar_deals = []
         
-        # Get venue description and additional details using trafilatura
-        business_place_data = None
-        if deal_data.get('google_maps_url'):
-            # Get more detailed information from Google Maps using trafilatura
-            try:
-                time.sleep(0.5)  # Wait a bit to avoid rate limiting
-                downloaded = trafilatura.fetch_url(deal_data.get('google_maps_url'))
-                if downloaded:
-                    # Extract the main text content
-                    full_text = trafilatura.extract(downloaded, include_comments=False, include_tables=True, no_fallback=False)
-                    if full_text:
-                        # Process the text to create a description
-                        lines = full_text.split('\n')
-                        relevant_lines = []
-                        hours_data = {}
-                        
-                        # Parse text content to get meaningful description and hours
-                        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                        
-                        for line in lines:
-                            line = line.strip()
-                            if not line:
-                                continue
-                                
-                            # Skip very short lines - they're likely UI elements
-                            if len(line) < 5:
-                                continue
-                                
-                            # Try to identify hours
-                            for day in days:
-                                if line.startswith(day) and ':' in line:
-                                    parts = line.split(':', 1)
-                                    if len(parts) == 2:
-                                        hours_data[parts[0].strip()] = parts[1].strip()
-                                    continue
-                            
-                            # Skip lines with common Google Maps UI text
-                            skip_phrases = ['directions', 'save', 'nearby', 'phone', 'suggest', 'street view', 
-                                          'write a review', 'reviews', 'photos', 'close', 'send to phone']
-                            
-                            if any(phrase in line.lower() for phrase in skip_phrases):
-                                continue
-                                
-                            # Add to relevant lines if it seems like meaningful content
-                            if len(line) > 15 and len(line) < 300:
-                                relevant_lines.append(line)
-                        
-                        # Set venue hours if found
-                        if hours_data:
-                            venue_hours = hours_data
-                            
-                        # Combine relevant lines into a description, but limit to first 3 meaningful entries
-                        if relevant_lines:
-                            # Join the most relevant text into a coherent description 
-                            venue_description = ' '.join(relevant_lines[:3])
-                            
-                    # Attempt to fetch venue image using the Google Maps Scraper
-                    business_place_data = GoogleMapsScraper.get_place_data(
-                        decoded_name, 
-                        deal_data.get('location', ''),
-                        deal_data.get('district'),
-                        timeout=3.0  # Shorter timeout to avoid long delays
-                    )
-            except Exception as e:
-                logger.warning(f"Error fetching additional venue details: {e}")
+        # Add a simple description if not available
+        if not venue_description and deal_data.get('place_type'):
+            venue_description = f"A {deal_data.get('place_type')} with special happy hour offers. Located in {deal_data.get('district', 'Berlin')}."
         
         # Look for similar deals (same district or nearby)
         try:

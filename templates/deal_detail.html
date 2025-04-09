@@ -23,162 +23,162 @@
     </nav>
 
     <div class="row">
-        <div class="col-md-8">
+        <!-- Main content -->
+        <div class="col-lg-8">
             <div class="card border-0 shadow-sm mb-4">
-                <!-- Header with image/gradient -->
-                <div class="deal-image-container position-relative">
-                    {% if venue_image %}
-                    <img src="data:image/jpeg;base64,{{ venue_image }}" class="img-fluid w-100" style="max-height: 350px; object-fit: cover;" alt="{{ deal.business_name }}" loading="lazy">
-                    {% else %}
-                    <div class="p-4 text-center" style="background: linear-gradient(135deg, var(--bb-primary), var(--bb-secondary));">
-                        <h1 class="display-5 text-white text-shadow" style="font-weight: 800;">{{ deal.business_name }}</h1>
-                        <p class="lead text-white mb-0">{{ deal.deal }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Info overlay -->
-                    <div class="position-absolute bottom-0 start-0 w-100 p-3" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);">
-                        <div class="d-flex justify-content-between align-items-end">
-                            <div>
-                                {% if deal.district %}
-                                <span class="badge bg-secondary mb-2">{{ deal.district }}</span>
-                                {% endif %}
-                                <h5 class="text-white mb-0">
-                                    <i class="fas fa-map-marker-alt me-2"></i>
-                                    {{ deal.location }}
-                                </h5>
-                            </div>
-                            
-                            {% if deal.rating %}
-                            <div class="text-white">
-                                <span class="text-warning">
-                                    {% for i in range(deal.rating|int) %}★{% endfor %}
-                                    {% if deal.rating|int < deal.rating %}½{% endif %}
-                                </span>
-                                <span class="ms-1">{{ deal.rating }}</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+                <!-- Simple header with clean gradient background -->
+                <div class="card-header text-white p-4" style="background: linear-gradient(to right, var(--bs-primary), var(--bs-info));">
+                    <h1 class="fs-2 mb-0">{{ deal.business_name }}</h1>
                 </div>
                 
                 <!-- Main content -->
-                <div class="card-body">
-                    <!-- Deal highlight -->
-                    <div class="deal-highlight p-3 mb-3 rounded">
-                        <h3 class="text-primary fs-4 mb-2">
-                            <i class="fas fa-glass-martini-alt me-2"></i>
-                            Happy Hour Deal
-                        </h3>
-                        <p class="lead mb-0">{{ deal.deal }}</p>
-                        
-                        <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="card-body p-4">
+                    <!-- Deal information -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-glass-martini-alt fs-4 text-primary me-2"></i>
+                            <h2 class="fs-4 mb-0">Happy Hour Deal</h2>
+                        </div>
+                        <p class="lead p-3 rounded" style="background-color: rgba(var(--bs-primary-rgb), 0.05);">
+                            {{ deal.deal }}
+                        </p>
+
+                        <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">
                                 <i class="far fa-clock me-1"></i>
                                 Added {{ deal.scraped_at | to_time_ago }}
                             </small>
                             
-                            <button class="btn btn-sm upvote-btn" data-business="{{ deal.business_name }}" title="Upvote this deal">
+                            <button class="btn btn-sm btn-outline-primary upvote-btn" data-business="{{ deal.business_name }}" title="Upvote this deal">
                                 <i class="fas fa-thumbs-up"></i>
                                 <span class="upvote-count">{{ deal.votes|default(0) }}</span>
                             </button>
                         </div>
                     </div>
+
+                    <hr>
+                    
+                    <!-- Location information -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-map-marker-alt fs-4 text-danger me-2"></i>
+                            <h2 class="fs-4 mb-0">Location</h2>
+                        </div>
+                        <p>{{ deal.location }}</p>
+                        {% if deal.district %}
+                        <div class="mb-2">
+                            <span class="badge bg-secondary">{{ deal.district }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
                     
                     <!-- Description when available -->
                     {% if venue_description %}
-                    <div class="mb-3">
-                        <h3 class="fs-4">About</h3>
+                    <hr>
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-info-circle fs-4 text-info me-2"></i>
+                            <h2 class="fs-4 mb-0">About</h2>
+                        </div>
                         <p>{{ venue_description }}</p>
                     </div>
                     {% endif %}
                     
-                    <!-- Row for business info and actions -->
-                    <div class="row mt-3">
-                        <!-- Left column: Business info -->
-                        <div class="col-md-7">
-                            {% if deal.place_type or deal.price_level %}
-                            <div class="mb-3">
-                                <h3 class="fs-5 mb-2">Business Information</h3>
-                                <ul class="list-unstyled">
-                                    {% if deal.place_type %}
-                                    <li class="mb-1">
-                                        <i class="fas fa-utensils me-2 text-secondary"></i>
-                                        Type: {{ deal.place_type }}
-                                    </li>
-                                    {% endif %}
-                                    
-                                    {% if deal.price_level %}
-                                    <li class="mb-1">
-                                        <i class="fas fa-euro-sign me-2 text-success"></i>
-                                        Price level: 
-                                        <span class="text-muted">
-                                            {% for i in range(deal.price_level) %}€{% endfor %}
-                                        </span>
-                                    </li>
-                                    {% endif %}
-                                </ul>
+                    <!-- Hours if available -->
+                    {% if venue_hours %}
+                    <hr>
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="far fa-clock fs-4 text-success me-2"></i>
+                            <h2 class="fs-4 mb-0">Opening Hours</h2>
+                        </div>
+                        <div class="row">
+                            {% for day, hours in venue_hours.items() %}
+                            <div class="col-md-6 mb-1">
+                                <strong>{{ day }}:</strong> {{ hours }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Business details if available -->
+                    {% if deal.place_type or deal.price_level %}
+                    <hr>
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-info-circle fs-4 text-primary me-2"></i>
+                            <h2 class="fs-4 mb-0">Business Details</h2>
+                        </div>
+                        <div class="row">
+                            {% if deal.place_type %}
+                            <div class="col-md-6 mb-2">
+                                <i class="fas fa-utensils me-2 text-secondary"></i>
+                                Type: {{ deal.place_type }}
                             </div>
                             {% endif %}
                             
-                            {% if venue_hours %}
-                            <div class="mb-3">
-                                <h3 class="fs-5 mb-2">Opening Hours</h3>
-                                <ul class="list-unstyled">
-                                    {% for day, hours in venue_hours.items() %}
-                                    <li class="mb-1">
-                                        <strong>{{ day }}:</strong> {{ hours }}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
+                            {% if deal.price_level %}
+                            <div class="col-md-6 mb-2">
+                                <i class="fas fa-euro-sign me-2 text-success"></i>
+                                Price level: 
+                                <span class="text-muted">
+                                    {% for i in range(deal.price_level) %}€{% endfor %}
+                                </span>
                             </div>
                             {% endif %}
                         </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action buttons -->
+                    <hr>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        <!-- Website button - new addition -->
+                        <a href="https://www.google.com/search?q={{ deal.business_name|urlencode }}+{{ deal.location|urlencode }}" 
+                           target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-globe me-2"></i> Visit Website
+                        </a>
                         
-                        <!-- Right column: Actions -->
-                        <div class="col-md-5">
-                            <h3 class="fs-5 mb-2">Actions</h3>
-                            <div class="d-grid gap-2">
-                                {% if deal.has_accurate_location or deal.google_maps_url %}
-                                <a href="{{ deal.google_maps_url or 'https://www.google.com/maps/search/' + deal.business_name|urlencode + '+' + deal.location|urlencode }}" target="_blank" class="btn btn-success">
-                                    <i class="fas fa-map-marked-alt me-2"></i> Google Maps
-                                </a>
-                                {% endif %}
-                                
-                                <button class="btn btn-primary post-to-telegram" data-business="{{ deal.business_name }}">
-                                    <i class="fab fa-telegram me-2"></i> Share on Telegram
-                                </button>
-                                
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="shareDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-share-alt me-2"></i> More Options
-                                    </button>
-                                    <ul class="dropdown-menu w-100" aria-labelledby="shareDropdown">
-                                        <li>
-                                            <a class="dropdown-item" href="https://twitter.com/intent/tweet?url={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}&text=Check out this deal at {{ deal.business_name }}!" target="_blank">
-                                                <i class="fab fa-twitter me-2"></i> Twitter
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}" target="_blank">
-                                                <i class="fab fa-facebook me-2"></i> Facebook
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="mailto:?subject=Check out this happy hour deal&body=I found this great deal at {{ deal.business_name }}:%0A%0A{{ deal.deal }}%0A%0ALocation: {{ deal.location }}%0A%0ACheck it out here: {{ url_for('view_deal', business_name=deal.business_name, _external=True) }}">
-                                                <i class="fas fa-envelope me-2"></i> Email
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
+                        <button class="btn btn-outline-info post-to-telegram" data-business="{{ deal.business_name }}">
+                            <i class="fab fa-telegram me-2"></i> Share on Telegram
+                        </button>
+                        
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="shareDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-share-alt me-2"></i> Share
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="shareDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="https://twitter.com/intent/tweet?url={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}&text=Check out this deal at {{ deal.business_name }}!" target="_blank">
+                                        <i class="fab fa-twitter me-2"></i> Twitter
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="https://www.facebook.com/sharer/sharer.php?u={{ url_for('view_deal', business_name=deal.business_name, _external=True) }}" target="_blank">
+                                        <i class="fab fa-facebook me-2"></i> Facebook
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="mailto:?subject=Check out this happy hour deal&body=I found this great deal at {{ deal.business_name }}:%0A%0A{{ deal.deal }}%0A%0ALocation: {{ deal.location }}%0A%0ACheck it out here: {{ url_for('view_deal', business_name=deal.business_name, _external=True) }}">
+                                        <i class="fas fa-envelope me-2"></i> Email
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
+                        
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary ms-auto">
+                            <i class="fas fa-arrow-left me-2"></i> Back to All Deals
+                        </a>
                     </div>
                     
-                    <!-- Similar deals (simplified) -->
+                    <!-- Similar deals -->
                     {% if similar_deals %}
                     <div class="mt-4">
-                        <h3 class="fs-4">Similar Deals Nearby</h3>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-map-signs fs-4 text-success me-2"></i>
+                            <h2 class="fs-4 mb-0">Similar Deals Nearby</h2>
+                        </div>
                         <div class="list-group">
                             {% for similar in similar_deals[:3] %}
                             <a href="{{ url_for('view_deal', business_name=similar.business_name) }}" class="list-group-item list-group-item-action">
@@ -205,35 +205,51 @@
             </div>
         </div>
         
-        <!-- Map sidebar -->
-        <div class="col-md-4">
+        <!-- Sidebar with venue image -->
+        <div class="col-lg-4">
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-0">
-                    <div class="map-container">
-                        <iframe 
-                            width="100%" 
-                            height="300" 
-                            style="border:0;" 
-                            loading="lazy" 
-                            allowfullscreen 
-                            src="https://www.google.com/maps/embed/v1/place?key=&q={{ deal.business_name|urlencode }}+{{ deal.location|urlencode }}">
-                        </iframe>
+                    {% if venue_image %}
+                    <img src="data:image/jpeg;base64,{{ venue_image }}" class="img-fluid w-100" style="max-height: 350px; object-fit: cover;" alt="{{ deal.business_name }}" loading="lazy">
+                    {% else %}
+                    <div class="p-5 text-center text-white" style="background: linear-gradient(45deg, var(--bs-primary), var(--bs-info));">
+                        <i class="fas fa-glass-martini-alt fa-5x mb-3"></i>
+                        <h3>{{ deal.business_name }}</h3>
                     </div>
+                    {% endif %}
+                    
                     <div class="p-3">
-                        <p class="mb-1">
-                            <i class="fas fa-map-marker-alt me-2 text-danger"></i>
-                            {{ deal.location }}
-                        </p>
-                        {% if deal.district %}
-                        <p class="mb-1">
-                            <i class="fas fa-map me-2 text-primary"></i>
-                            {{ deal.district }} District
+                        <h4 class="fs-5 mb-3">Deal Information</h4>
+                        {% if deal.rating %}
+                        <p class="mb-2">
+                            <i class="fas fa-star me-2 text-warning"></i>
+                            Rating: 
+                            <span class="text-warning">
+                                {% for i in range(deal.rating|int) %}★{% endfor %}
+                                {% if deal.rating|int < deal.rating %}½{% endif %}
+                            </span>
+                            <span>({{ deal.rating }})</span>
                         </p>
                         {% endif %}
                         
-                        <a href="{{ url_for('home') }}" class="btn btn-outline-primary mt-3 w-100">
-                            <i class="fas fa-arrow-left me-2"></i> Back to All Deals
-                        </a>
+                        {% if deal.district %}
+                        <p class="mb-2">
+                            <i class="fas fa-map me-2 text-primary"></i>
+                            District: {{ deal.district }}
+                        </p>
+                        {% endif %}
+                        
+                        {% if deal.place_type %}
+                        <p class="mb-2">
+                            <i class="fas fa-store me-2 text-secondary"></i>
+                            Type: {{ deal.place_type }}
+                        </p>
+                        {% endif %}
+                        
+                        <p class="mb-2">
+                            <i class="far fa-calendar-alt me-2 text-info"></i>
+                            Added: {{ deal.scraped_at }}
+                        </p>
                     </div>
                 </div>
             </div>
