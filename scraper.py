@@ -677,7 +677,7 @@ class YelpScraper:
             
             # Use verified sources for Berlin locations
             if use_verified_sources and "berlin" in location.lower():
-                deals = YelpScraper.scrape_verified_sources()
+                deals = scrape_verified_sources()  # Call the function directly, not as class method
             else:
                 deals = YelpScraper.generate_deals_for_region(region_data, location, limit)
             
