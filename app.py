@@ -45,6 +45,18 @@ def page_not_found(e):
     """Handle 404 errors"""
     return render_template('error.html', error="Page not found"), 404
 
+# Health check endpoint for deployment monitoring
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring"""
+    from datetime import datetime
+    return jsonify({
+        "status": "ok", 
+        "timestamp": datetime.now().isoformat(),
+        "app_name": "Backyard Billboards",
+        "version": "1.0.0"
+    })
+
 # Ensure the app is accessible for testing tools
 @app.after_request
 def after_request(response):
