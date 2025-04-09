@@ -5,30 +5,23 @@ import multiprocessing
 # Use Replit-specific $PORT if available, otherwise default to 5000
 bind = "0.0.0.0:" + os.environ.get("PORT", "5000")
 
-# Adjust workers based on machine's CPU cores - for Replit, keep it small
-workers = min(multiprocessing.cpu_count(), 2)
-
-# Restart workers after this many requests (to prevent memory leaks)
-max_requests = 1000
-max_requests_jitter = 50
+# Use 4 workers as specified in deployment
+workers = 4
 
 # Configure timeouts (in seconds)
-timeout = 120  # Increased for potentially slow operations
+timeout = 120
 keepalive = 5
 
-# Reuse port (helps with socket issues during restarts)
-reuse_port = True
-
-# Use both synchronous and asynchronous workers
+# Use synchronous workers
 worker_class = "sync"
 
 # Logging configuration
-accesslog = "-"  # Log to stdout
-errorlog = "-"   # Log to stderr
+accesslog = "-"
+errorlog = "-"
 loglevel = "info"
 
-# Enable auto-reload for development in Replit
-reload = True
+# Disable development settings
+reload = False
 
 # Don't daemonize - important for containerized environments like Replit
 daemon = False
