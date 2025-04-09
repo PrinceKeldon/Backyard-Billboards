@@ -33,6 +33,18 @@ os.environ["RESTRICT_TO_BERLIN"] = "true"           # Flag to restrict all resul
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "backyard-billboards-local-dev-secret-key")
 
+# Configure error handling
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all exceptions during request processing"""
+    app.logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
+    return render_template('error.html', error=str(e)), 500
+
+@app.errorhandler(404)
+def page_not_found(e):
+    """Handle 404 errors"""
+    return render_template('error.html', error="Page not found"), 404
+
 # Ensure the app is accessible for testing tools
 @app.after_request
 def after_request(response):
