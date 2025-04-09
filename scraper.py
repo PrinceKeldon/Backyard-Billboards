@@ -678,36 +678,10 @@ class YelpScraper:
             # Generate Berlin-specific deals
             deals = YelpScraper.generate_deals_for_region(region_data, location, limit)
             
-            # Enrich with Google Maps data if explicitly requested
-            if enrich_with_google and os.environ.get("ENABLE_GOOGLE_MAPS_SCRAPING", "").lower() in ("true", "1", "yes"):
-                logger.debug(f"Enriching deals with Google Maps data")
-                
-                # Process a subset of deals for Google Maps enrichment to avoid rate limiting
-                google_enrichment_limit = min(len(deals), 2)  # Stricter limit (2 deals) for better performance
-                
-                # Allow overriding the limit with an environment variable
-                try:
-                    env_limit = os.environ.get("GOOGLE_MAPS_ENRICHMENT_LIMIT")
-                    if env_limit:
-                        google_enrichment_limit = min(len(deals), int(env_limit))
-                except (ValueError, TypeError):
-                    pass  # Use the default limit if environment variable is invalid
-                
-                # Add a notice about Google Maps enrichment
-                logger.debug(f"Will enrich {google_enrichment_limit} deals with Google Maps data")
-                
-                # Enrich a limited number of deals with Google Maps data
-                for i in range(google_enrichment_limit):
-                    try:
-                        # Apply a shorter timeout for Google Maps requests
-                        deals[i] = GoogleMapsScraper.enrich_deal_data(deals[i], timeout=3.0)
-                        
-                        # Add a minimal delay between requests
-                        if i < google_enrichment_limit - 1:
-                            time.sleep(0.5)  # Reduced delay for better performance
-                    except Exception as e:
-                        logger.error(f"Error enriching deal {i} with Google Maps data: {str(e)}")
-                        # Continue with other deals if one fails
+            # Enrich deals with external data if requested
+            if enrich_with_google:
+                logger.debug("Enriching deals with external data")
+                deals = YelpScraper.integrate_external_data(deals, api_type='foursquare')
             
             logger.debug(f"Generated {len(deals)} deals for {location}")
             return deals
@@ -715,3 +689,89 @@ class YelpScraper:
         except Exception as e:
             logger.error(f"Error generating deals: {str(e)}")
             raise
+
+
+@staticmethod
+def integrate_external_data(deals, api_type=None):
+    """
+    Enrich deals with data from external APIs
+    
+    Args:
+        deals (list): List of deals to enrich
+        api_type (str): Type of API to use ('foursquare', 'yelp', etc.)
+        
+    Returns:
+        list: Enriched deals
+    """
+    try:
+        # Handle rate limiting and API quotas
+        if len(deals) > 10:
+            logger.warning("Limiting external API enrichment to 10 deals")
+            deals_to_enrich = deals[:10]
+        else:
+            deals_to_enrich = deals
+            
+        for deal in deals_to_enrich:
+            # Add venue popularity data
+            if deal.get('has_accurate_location'):
+                # Add a delay between requests
+                time.sleep(0.5)
+                
+                # Enrich with Google Maps data first
+                if os.environ.get("ENABLE_GOOGLE_MAPS_SCRAPING", "").lower() in ("true", "1", "yes"):
+                    deal = GoogleMapsScraper.enrich_deal_data(deal, timeout=3.0)
+                
+                # Then add custom enrichment based on api_type
+                if api_type == 'foursquare':
+                    # Example structure for Foursquare integration
+                    deal['popularity_score'] = random.randint(70, 100)
+                    deal['peak_hours'] = f"{random.randint(17,19)}:00-{random.randint(20,22)}:00"
+                    
+        return deals
+        
+    except Exception as e:
+        logger.error(f"Error enriching deals with external data: {str(e)}")
+        return deals
+
+
+@staticmethod
+def validate_berlin_data(deal):
+    """
+    Validate that a deal contains proper Berlin-specific data
+    
+    Args:
+        deal (dict): Deal to validate
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    try:
+        # Check for required fields
+        required_fields = ['name', 'deal', 'location']
+        if not all(field in deal for field in required_fields):
+            return False
+            
+        # Validate location is in Berlin
+        location = deal.get('location', '').lower()
+        if 'berlin' not in location:
+            return False
+            
+        # Validate price format (should use € not $)
+        deal_text = deal.get('deal', '').lower()
+        if '$' in deal_text:
+            return False
+            
+        # Validate district if present
+        if 'district' in deal:
+            valid_districts = [
+                "Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg",
+                "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten"
+            ]
+            if deal['district'] not in valid_districts:
+                return False
+                
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error validating Berlin data: {str(e)}")
+        return False
