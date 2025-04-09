@@ -59,3 +59,37 @@ def get_time_ago(date_str):
     except Exception as e:
         logger.error(f"Error calculating time ago: {str(e)}")
         return "unknown time ago"
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+def get_time_ago(timestamp):
+    """
+    Get a human-readable time difference from now
+    
+    Args:
+        timestamp (str): Timestamp in ISO format
+        
+    Returns:
+        str: Human-readable time difference
+    """
+    try:
+        date_obj = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        now = datetime.utcnow()
+        diff = now - date_obj
+        
+        seconds = diff.total_seconds()
+        if seconds < 60:
+            return f"{int(seconds)} seconds ago"
+        elif seconds < 3600:
+            return f"{int(seconds // 60)} minutes ago"
+        elif seconds < 86400:
+            return f"{int(seconds // 3600)} hours ago"
+        elif seconds < 604800:
+            return f"{int(seconds // 86400)} days ago"
+        else:
+            return date_obj.strftime("%B %d, %Y")
+    except Exception as e:
+        logger.error(f"Error calculating time ago: {str(e)}")
+        return timestamp
