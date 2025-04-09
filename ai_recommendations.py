@@ -13,7 +13,15 @@ logger = logging.getLogger(__name__)
 
 # Initialize OpenAI client
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-openai = OpenAI(api_key=OPENAI_API_KEY)
+openai = None
+if OPENAI_API_KEY:
+    try:
+        openai = OpenAI(api_key=OPENAI_API_KEY)
+        logger.info("OpenAI client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+else:
+    logger.warning("OPENAI_API_KEY not found in environment variables")
 
 def get_ai_recommendation(user_preferences, deals):
     """
