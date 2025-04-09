@@ -1,2 +1,2 @@
 
-web: gunicorn --bind 0.0.0.0:5000 --workers 4 main:app
+web: gunicorn -c gunicorn_config.py main:app
