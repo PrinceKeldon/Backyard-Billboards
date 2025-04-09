@@ -1,0 +1,66 @@
+# districts.py
+import requests
+from bs4 import BeautifulSoup
+
+DISTRICT_CONFIG = {
+    "neukoelln": {
+        "sources": [
+            {"url": "https://www.neukoellner.net/happy-hours", "selector": ".deal-item"},
+            {"url": "https://www.turkish-berlin.de/lokal", "selector": "ul.deals li"}
+        ],
+        "terms": {"beer": "Efes", "discount": "İndirim"}
+    },
+    "wedding": {
+        "sources": [
+            {"url": "https://weddingweiser.de/trinktipps", "selector": "div.deal"},
+            {"url": "https://visitberlin.de/de/wedding-nightlife", "selector": ".offer"}
+        ],
+        "terms": {"happy hour": "Billiger saufen"}
+    },
+    "charlottenburg": {
+        "sources": [
+            {"url": "https://charlottenburg-news.de/gastronomie", "selector": ".angebote"},
+            {"url": "https://berlin.de/charlottenburg-wilmersdorf/veranstaltungen/trinken/", "selector": ".event-list li"}
+        ],
+        "terms": {"happy hour": "Aperitif Stunde"}
+    },
+    # Add all 12 districts...
+}
+
+def scrape_district(district):
+    config = DISTRICT_CONFIG.get(district.lower())
+    if not config:
+        return []
+    
+    all_deals = []
+    for source in config["sources"]:
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0",
+                "Accept-Language": "de-DE,tr;q=0.9"
+            }
+            response = requests.get(source["url"], headers=headers, timeout=10)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            deals = []
+            for item in soup.select(source["selector"]):
+                deal_text = item.get_text(strip=True)
+                if any(word in deal_text.lower() for word in ["€", "rabatt", "angebot"]):
+                    deals.append(deal_text)
+            
+            # Localize terms
+            localized = []
+            for deal in deals:
+                for eng, local in config["terms"].items():
+                    deal = deal.replace(eng, local)
+                localized.append(deal)
+            
+            all_deals.extend(localized[:5])  # Limit to top 5 per source
+            
+        except Exception as e:
+            print(f"{district} error on {source['url']}: {str(e)}")
+    
+    return all_deals
+
+# Usage:
+print(scrape_district("neukoelln"))  # Test Neukölln scraper
