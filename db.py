@@ -5,7 +5,31 @@ import logging
 logger = logging.getLogger(__name__)
 
 class DealDB:
-    """Database class for managing happy hour deals"""
+    """Database class for managing happy hour deals and users"""
+    
+    def add_user(self, username, password_hash):
+        """Add a new user"""
+        try:
+            if username in self.db:
+                return False
+            self.db[username] = {
+                "password_hash": password_hash,
+                "username": username
+            }
+            return True
+        except Exception as e:
+            logger.error(f"Error adding user: {str(e)}")
+            raise
+
+    def get_user(self, username):
+        """Get user data"""
+        try:
+            if username in self.db:
+                return self.db[username]
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user: {str(e)}")
+            raise
     
     def __init__(self):
         """Initialize database connection"""

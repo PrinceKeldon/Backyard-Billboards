@@ -8,6 +8,8 @@ import base64
 import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from models import User
 from db import DealDB
 from scraper import YelpScraper
 from google_maps_scraper import GoogleMapsScraper
@@ -32,6 +34,15 @@ os.environ["RESTRICT_TO_BERLIN"] = "true"           # Flag to restrict all resul
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "backyard-billboards-local-dev-secret-key")
+
+# Setup Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 # Import and register Jinja filters
 from utils import get_time_ago
@@ -340,7 +351,43 @@ def scrape_deals():
 
 # Telegram functionality has been removed to simplify deployment
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.get(username)
+        
+        if user and user.verify_password(password):
+            login_user(user)
+            flash('Logged in successfully.', 'success')
+            return redirect(url_for('home'))
+        
+        flash('Invalid username or password.', 'danger')
+    return render_template('login.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if User.create(username, password):
+            flash('Account created successfully. Please login.', 'success')
+            return redirect(url_for('login'))
+            
+        flash('Username already exists.', 'danger')
+    return render_template('signup.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('home'))
+
 @app.route("/submit", methods=["GET", "POST"])
+@login_required
 def submit_deal():
     """Route for manual deal submission"""
     if request.method == "POST":
