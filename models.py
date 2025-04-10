@@ -18,15 +18,16 @@ class User(UserMixin):
             return User(
                 id=user_id,
                 username=user_data['username'],
+                email=user_data.get('email', 'user@example.com'),  # Provide a default email if none exists
                 password_hash=user_data['password_hash']
             )
         return None
 
     @staticmethod
-    def create(username, password):
+    def create(username, email, password):
         db = DealDB()
         password_hash = generate_password_hash(password)
-        return db.add_user(username, password_hash)
+        return db.add_user(username, email, password_hash)
 
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
