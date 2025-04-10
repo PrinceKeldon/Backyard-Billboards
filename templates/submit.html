@@ -77,6 +77,40 @@
                         <div class="form-text">Check this if the address is accurate enough to show on a map.</div>
                     </div>
                     
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_hidden_gem" name="is_hidden_gem">
+                        <label class="form-check-label" for="is_hidden_gem">
+                            <i class="fas fa-gem text-primary me-1"></i>
+                            This is a Hidden Gem
+                        </label>
+                        <div class="form-text">Check this if this place is a lesser-known local favorite that tourists might miss!</div>
+                    </div>
+                    
+                    <div id="hidden-gem-details" class="mb-3 border rounded p-3 bg-light d-none">
+                        <h5 class="border-bottom pb-2">Hidden Gem Details</h5>
+                        
+                        <div class="mb-3">
+                            <label for="hidden_gem_description" class="form-label">What makes this place special?</label>
+                            <textarea class="form-control" id="hidden_gem_description" name="hidden_gem_description" 
+                                rows="3" placeholder="Describe what makes this place unique or special..."></textarea>
+                            <div class="form-text">Share what's unique about this place that makes it worth visiting.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="hidden_gem_tips" class="form-label">Insider tips</label>
+                            <textarea class="form-control" id="hidden_gem_tips" name="hidden_gem_tips" 
+                                rows="2" placeholder="Any insider tips for visitors? (Best time to visit, what to order, etc.)"></textarea>
+                            <div class="form-text">Share any insider knowledge that would enhance someone's visit.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="submitted_by" class="form-label">Your name (optional)</label>
+                            <input type="text" class="form-control" id="submitted_by" name="submitted_by" 
+                                placeholder="e.g., Alex or 'A local resident'">
+                            <div class="form-text">Let others know who discovered this hidden gem.</div>
+                        </div>
+                    </div>
+                    
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <a href="{{ url_for('home') }}" class="btn btn-secondary">
                             <i class="fas fa-times me-2"></i>
@@ -87,6 +121,22 @@
                             Submit Deal
                         </button>
                     </div>
+                    
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const hiddenGemCheckbox = document.getElementById('is_hidden_gem');
+                            const hiddenGemDetails = document.getElementById('hidden-gem-details');
+                            
+                            // Toggle hidden gem details section visibility
+                            hiddenGemCheckbox.addEventListener('change', function() {
+                                if (this.checked) {
+                                    hiddenGemDetails.classList.remove('d-none');
+                                } else {
+                                    hiddenGemDetails.classList.add('d-none');
+                                }
+                            });
+                        });
+                    </script>
                 </form>
             </div>
             <div class="card-footer">

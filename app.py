@@ -269,16 +269,45 @@ def submit_deal():
             district = request.form.get("district")
             has_accurate_location = True if request.form.get("accurate_location") == "on" else False
             
+            # Process hidden gem data
+            is_hidden_gem = True if request.form.get("is_hidden_gem") == "on" else False
+            hidden_gem_description = request.form.get("hidden_gem_description", "")
+            hidden_gem_tips = request.form.get("hidden_gem_tips", "")
+            submitted_by = request.form.get("submitted_by", "")
+            
             if not business_name or not deal or not location:
                 flash("All fields are required", "danger")
                 return redirect(url_for("submit_deal"))
             
+            # If marked as hidden gem, ensure description is provided
+            if is_hidden_gem and not hidden_gem_description:
+                flash("Please provide a description of what makes this place special if marking it as a hidden gem", "warning")
+                return redirect(url_for("submit_deal"))
+                
+            # Set submission type
+            submission_type = "hidden_gem" if is_hidden_gem else "regular"
+            
+            # Add to database with additional hidden gem fields if applicable
+            kwargs = {
+                "district": district,
+                "has_accurate_location": has_accurate_location,
+                "submission_type": submission_type
+            }
+            
+            # Only add hidden gem fields if it's marked as a hidden gem
+            if is_hidden_gem:
+                kwargs.update({
+                    "is_hidden_gem": True,
+                    "hidden_gem_description": hidden_gem_description,
+                    "hidden_gem_tips": hidden_gem_tips,
+                    "submitted_by": submitted_by
+                })
+                
             deal_db.add_deal(
                 business_name, 
                 deal, 
                 location, 
-                district=district,
-                has_accurate_location=has_accurate_location
+                **kwargs
             )
             flash("Deal submitted successfully!", "success")
             return redirect(url_for("home"))

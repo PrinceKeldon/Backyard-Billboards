@@ -49,7 +49,9 @@ class DealDB:
             # Add optional fields from kwargs
             optional_fields = [
                 "district", "rating", "reviews_count", "place_type", 
-                "price_level", "google_maps_url"
+                "price_level", "google_maps_url", "is_hidden_gem",
+                "hidden_gem_description", "hidden_gem_tips", "hidden_gem_photo_url",
+                "submitted_by", "submission_type"
             ]
             
             for field in optional_fields:
@@ -220,4 +222,38 @@ class DealDB:
             return sorted_deals[:limit]
         except Exception as e:
             logger.error(f"Error getting top voted deals: {str(e)}")
+            raise
+            
+    def get_hidden_gems(self, district=None, limit=None):
+        """
+        Get deals marked as hidden gems
+        
+        Args:
+            district (str, optional): Filter by district
+            limit (int, optional): Maximum number of deals to return
+            
+        Returns:
+            list: List of hidden gem deals
+        """
+        try:
+            deals = self.get_all_deals()
+            
+            # Filter deals that are marked as hidden gems
+            hidden_gems = [deal for deal in deals if deal.get("is_hidden_gem") == True]
+            
+            # Apply district filter if provided
+            if district:
+                hidden_gems = [deal for deal in hidden_gems if deal.get("district") == district]
+                
+            # Sort hidden gems by votes (highest first)
+            hidden_gems = sorted(hidden_gems, key=lambda x: x.get("votes", 0), reverse=True)
+            
+            # Apply limit if provided
+            if limit:
+                hidden_gems = hidden_gems[:limit]
+                
+            logger.debug(f"Returning {len(hidden_gems)} hidden gems")
+            return hidden_gems
+        except Exception as e:
+            logger.error(f"Error getting hidden gems: {str(e)}")
             raise
