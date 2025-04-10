@@ -179,24 +179,35 @@ def home():
             filtered_deals = sorted(filtered_deals, key=lambda x: x.get("scraped_at", ""), reverse=True)
         
         # Return the filtered deals with all filter parameters
+        # Get count of hidden gems for the navigation badge
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+        
         return render_template(
             "index.html", 
             deals=filtered_deals, 
             districts=districts, 
             current_district=district,
             search_query=search_query,
-            deal_type=deal_type
+            deal_type=deal_type,
+            hidden_gems_count=hidden_gems_count
         )
     except Exception as e:
         logger.error(f"Error retrieving deals: {str(e)}")
         flash(f"Error retrieving deals: {str(e)}", "danger")
+        # Still try to get hidden gems count for navigation
+        try:
+            hidden_gems_count = len(deal_db.get_hidden_gems())
+        except:
+            hidden_gems_count = 0
+            
         return render_template(
             "index.html", 
             deals=[], 
             districts=[], 
             current_district=None,
             search_query='',
-            deal_type=''
+            deal_type='',
+            hidden_gems_count=hidden_gems_count
         )
 
 @app.route("/hidden-gems")
@@ -394,7 +405,13 @@ def submit_deal():
     except Exception as e:
         logger.error(f"Error retrieving districts: {str(e)}")
     
-    return render_template("submit.html", districts=berlin_districts)
+    # Get count of hidden gems for the navigation badge
+    try:
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+    except:
+        hidden_gems_count = 0
+        
+    return render_template("submit.html", districts=berlin_districts, hidden_gems_count=hidden_gems_count)
 
 @app.route("/delete", methods=["POST"])
 def delete_deal():
