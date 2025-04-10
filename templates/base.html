@@ -88,6 +88,14 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/hidden-gems' %}active{% endif %}" href="{{ url_for('hidden_gems') }}">
+                            <i class="fas fa-gem me-1"></i> Hidden Gems
+                            {% if hidden_gems_count and hidden_gems_count > 0 %}
+                                <span class="badge bg-primary rounded-pill">{{ hidden_gems_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <button id="theme-toggle" class="btn nav-link">
                             <i class="fas fa-moon me-1" id="theme-icon"></i> <span id="theme-text">Light Mode</span>
                         </button>

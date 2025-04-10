@@ -199,6 +199,61 @@ def home():
             deal_type=''
         )
 
+@app.route("/hidden-gems")
+def hidden_gems():
+    """Route to display hidden gem venues submitted by users"""
+    try:
+        # Get filter parameters
+        district = request.args.get('district', '')
+        
+        # Get hidden gems, with optional district filter
+        if district:
+            gems = deal_db.get_hidden_gems(district=district)
+        else:
+            gems = deal_db.get_hidden_gems()
+            
+        # Set up pagination
+        page = request.args.get('page', 1, type=int)
+        per_page = 10
+        total_gems = len(gems)
+        
+        # Calculate pagination
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_gems = gems[start_idx:end_idx]
+        
+        # Create pagination object
+        pagination = {
+            'has_prev': page > 1,
+            'has_next': end_idx < total_gems,
+            'prev_num': page - 1,
+            'next_num': page + 1,
+            'total_pages': (total_gems + per_page - 1) // per_page,
+            'current_page': page
+        }
+        
+        # Get all unique districts for filtering
+        all_districts = sorted(list(set(gem.get('district') for gem in gems if gem.get('district'))))
+        
+        # Construct pagination URL
+        pagination_url = url_for('hidden_gems')
+        if district:
+            pagination_url += f"?district={district}"
+        
+        return render_template(
+            'hidden_gems.html',
+            hidden_gems=paginated_gems,
+            districts=all_districts,
+            current_district=district,
+            pagination=pagination,
+            current_page=page,
+            hidden_gems_count=total_gems
+        )
+    except Exception as e:
+        logger.error(f"Error displaying hidden gems: {str(e)}")
+        flash(f"Error displaying hidden gems: {str(e)}", "danger")
+        return render_template('error.html', error=str(e)), 500
+        
 @app.route("/scrape", methods=["POST"])
 def scrape_deals():
     """Route to trigger scraping of deals"""

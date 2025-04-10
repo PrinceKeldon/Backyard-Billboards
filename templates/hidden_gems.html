@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}Hidden Gems - Local Favorites in Berlin{% endblock %}
+
+{% block og_title %}Hidden Gems - Discover Berlin's Best Kept Secrets{% endblock %}
+
+{% block og_description %}Explore user-submitted hidden gems in Berlin's vibrant neighborhoods. Discover local favorites that tourists might miss.{% endblock %}
+
+{% block og_image %}{{ url_for('static', filename='img/og-default.jpg', _external=True) }}{% endblock %}
+
+{% block twitter_title %}{{ self.og_title() }}{% endblock %}
+{% block twitter_description %}{{ self.og_description() }}{% endblock %}
+{% block twitter_image %}{{ self.og_image() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <h1 class="mb-4">
+            <i class="fas fa-gem me-2"></i>
+            Hidden Gems
+        </h1>
+        <p class="text-muted">Local favorites and secret spots in Berlin, submitted by our community.</p>
+        
+        <!-- District Filter -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    Filter by District
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{{ url_for('hidden_gems') }}">
+                    <div class="mb-3">
+                        <select class="form-select" name="district" id="district">
+                            <option value="">All Districts</option>
+                            {% for district in districts %}
+                                <option value="{{ district }}" {% if current_district == district %}selected{% endif %}>
+                                    {{ district }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i>
+                            Apply Filter
+                        </button>
+                    </div>
+                </form>
+                {% if current_district %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('hidden_gems') }}" class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="fas fa-times me-2"></i>
+                            Clear Filter
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Submit Your Own -->
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Know a Hidden Gem?</h5>
+                <p class="card-text small">Share your favorite local spots with the community.</p>
+                <a href="{{ url_for('submit_deal') }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Submit a Hidden Gem
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <!-- Current District Display -->
+        {% if current_district %}
+            <div class="alert alert-info">
+                <i class="fas fa-map-marker-alt me-2"></i>
+                Showing hidden gems in <strong>{{ current_district }}</strong>
+                <a href="{{ url_for('hidden_gems') }}" class="float-end">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        {% endif %}
+        
+        <!-- Hidden Gems Cards -->
+        {% if hidden_gems %}
+            <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+                {% for gem in hidden_gems %}
+                    <div class="col">
+                        <div class="card h-100 deal-card">
+                            <div class="card-header">
+                                <h5 class="mb-0 gemcard-title">
+                                    <a href="{{ url_for('view_deal', business_name=gem.business_name|urlencode) }}" class="text-decoration-none stretched-link">
+                                        {{ gem.business_name }}
+                                    </a>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">{{ gem.deal }}</p>
+                                
+                                {% if gem.hidden_gem_description %}
+                                    <div class="mb-3 gem-description">
+                                        <h6 class="text-primary"><i class="fas fa-star me-2"></i>What makes it special:</h6>
+                                        <p class="mb-0">{{ gem.hidden_gem_description }}</p>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if gem.hidden_gem_tips %}
+                                    <div class="mb-3 gem-tips">
+                                        <h6 class="text-primary"><i class="fas fa-lightbulb me-2"></i>Insider tip:</h6>
+                                        <p class="mb-0">{{ gem.hidden_gem_tips }}</p>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="mt-3">
+                                    <small>
+                                        <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        {% if gem.district %}
+                                            <a href="{{ url_for('hidden_gems', district=gem.district) }}" class="text-decoration-none">
+                                                {{ gem.district }}
+                                            </a>,
+                                        {% endif %}
+                                        {{ gem.location }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted d-flex justify-content-between align-items-center">
+                                <div>
+                                    {% if gem.submitted_by %}
+                                        <small><i class="fas fa-user me-1"></i> Discovered by: {{ gem.submitted_by }}</small>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <!-- Upvote button -->
+                                    <form action="{{ url_for('upvote_deal') }}" method="post" class="d-inline upvote-form">
+                                        <input type="hidden" name="business_name" value="{{ gem.business_name }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-thumbs-up me-1"></i>
+                                            <span class="vote-count">{{ gem.votes|default(0) }}</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if pagination.total_pages > 1 %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ pagination_url }}{% if '?' in pagination_url %}&{% else %}?{% endif %}page={{ pagination.prev_num }}">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+                            </li>
+                        {% endif %}
+                        
+                        <!-- Page Numbers -->
+                        {% for page_num in range(1, pagination.total_pages + 1) %}
+                            <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                                <a class="page-link" href="{{ pagination_url }}{% if '?' in pagination_url %}&{% else %}?{% endif %}page={{ page_num }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                        
+                        {% if pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ pagination_url }}{% if '?' in pagination_url %}&{% else %}?{% endif %}page={{ pagination.next_num }}">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+            
+        {% else %}
+            <div class="alert alert-info">
+                <h4 class="alert-heading"><i class="fas fa-info-circle me-2"></i> No Hidden Gems Found</h4>
+                <p>There are no hidden gems in our database yet{% if current_district %} for {{ current_district }}{% endif %}.</p>
+                <hr>
+                <p class="mb-0">
+                    Know a hidden gem? 
+                    <a href="{{ url_for('submit_deal') }}" class="alert-link">Submit one now!</a>
+                </p>
+            </div>
+        {% endif %}
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add special styling for gem cards
+        const gemCards = document.querySelectorAll('.deal-card');
+        gemCards.forEach(card => {
+            card.style.borderColor = '#6f42c1';
+            const cardHeader = card.querySelector('.card-header');
+            if (cardHeader) {
+                cardHeader.style.background = 'linear-gradient(135deg, #6f42c1 0%, #6610f2 100%)';
+                cardHeader.style.color = 'white';
+            }
+            const gemTitle = card.querySelector('.gemcard-title a');
+            if (gemTitle) {
+                gemTitle.style.color = 'white';
+                gemTitle.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
+            }
+        });
+        
+        // Handle upvote forms with AJAX
+        const upvoteForms = document.querySelectorAll('.upvote-form');
+        upvoteForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const button = form.querySelector('button');
+                const voteCount = button.querySelector('.vote-count');
+                
+                // Disable button temporarily
+                button.disabled = true;
+                
+                fetch('/upvote', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update the vote count
+                        voteCount.textContent = data.vote_count;
+                        
+                        // Add a brief animation
+                        button.classList.add('btn-success');
+                        button.classList.remove('btn-outline-secondary');
+                        
+                        // Reset after animation
+                        setTimeout(() => {
+                            button.classList.remove('btn-success');
+                            button.classList.add('btn-outline-secondary');
+                            button.disabled = false;
+                        }, 1000);
+                    } else {
+                        console.error('Error upvoting:', data.message);
+                        button.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    button.disabled = false;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
