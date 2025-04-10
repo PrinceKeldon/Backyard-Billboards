@@ -9,6 +9,22 @@
     --bb-light: #E6EBE0;        /* Off-white */
     --bb-dark: #252525;         /* Dark gray */
     
+    /* Cityscape color variables */
+    --sky-morning: linear-gradient(to bottom, #FFC582, #F8E7C2);
+    --sky-day: linear-gradient(to bottom, #56CCF2, #2F80ED);
+    --sky-evening: linear-gradient(to bottom, #614385, #516395);
+    --sky-night: linear-gradient(to bottom, #232526, #414345);
+    
+    --building-color-1: #0D1B2A;
+    --building-color-2: #1B263B;
+    --building-color-3: #415A77;
+    --building-color-4: #253C5B;
+    
+    --window-morning: #FFDF7A;
+    --window-day: #C0D6DF;
+    --window-evening: #FFAA51;
+    --window-night: #FFF281;
+    
     /* Transitions */
     transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -598,6 +614,241 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--bb-secondary);
 }
 
+/* Berlin Cityscape Background */
+.cityscape-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 300px;
+    z-index: -1;
+    overflow: hidden;
+    transition: background 1s ease-in-out;
+}
+
+.cityscape-sky {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: background 1s ease-in-out;
+}
+
+/* Time-based sky backgrounds */
+.morning-sky {
+    background: var(--sky-morning);
+}
+
+.day-sky {
+    background: var(--sky-day);
+}
+
+.evening-sky {
+    background: var(--sky-evening);
+}
+
+.night-sky {
+    background: var(--sky-night);
+}
+
+/* Sun/Moon */
+.celestial-body {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    transition: all 1s ease-in-out;
+}
+
+.sun {
+    background: radial-gradient(circle, #FFDE59 30%, #FF9500 100%);
+    box-shadow: 0 0 40px rgba(255, 149, 0, 0.6);
+}
+
+.moon {
+    background: radial-gradient(circle, #F8F9FA 30%, #CED4DA 100%);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+/* City silhouette */
+.cityscape-buildings {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 180px;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+}
+
+.building {
+    width: 80px;
+    background-color: var(--building-color-1);
+    position: relative;
+    bottom: 0;
+    margin: 0 -15px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.building-1 {
+    height: 120px;
+    background-color: var(--building-color-1);
+}
+
+.building-2 {
+    height: 160px;
+    background-color: var(--building-color-2);
+}
+
+.building-3 {
+    height: 140px;
+    background-color: var(--building-color-3);
+}
+
+.building-4 {
+    height: 180px;
+    background-color: var(--building-color-1);
+}
+
+.building-5 {
+    height: 150px;
+    background-color: var(--building-color-4);
+}
+
+.building-6 {
+    height: 170px;
+    background-color: var(--building-color-2);
+}
+
+.building-7 {
+    height: 130px;
+    background-color: var(--building-color-3);
+}
+
+.building-8 {
+    height: 155px;
+    background-color: var(--building-color-1);
+}
+
+.building-1::before, .building-3::before, .building-5::before, .building-7::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background-color: inherit;
+}
+
+.building-2::before, .building-4::before, .building-6::before, .building-8::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 0;
+    width: 100%;
+    height: 15px;
+    background-color: inherit;
+    clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+
+/* Windows */
+.window {
+    position: absolute;
+    width: 10px;
+    height: 15px;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: background-color 1s ease-in-out;
+}
+
+.window-lit {
+    position: absolute;
+    width: 10px;
+    height: 15px;
+    transition: background-color 1s ease-in-out;
+}
+
+/* Stars for night sky */
+.star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background-color: white;
+    border-radius: 50%;
+    animation: twinkle 4s infinite;
+    opacity: 0;
+}
+
+@keyframes twinkle {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Cloud animations */
+.cloud {
+    position: absolute;
+    width: 150px;
+    height: 60px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50px;
+    animation: float-cloud 60s linear infinite;
+    top: 60px;
+    opacity: 0.7;
+}
+
+.cloud::before, .cloud::after {
+    content: '';
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+}
+
+.cloud::before {
+    width: 80px;
+    height: 80px;
+    top: -30px;
+    left: 20px;
+}
+
+.cloud::after {
+    width: 60px;
+    height: 60px;
+    top: -20px;
+    right: 20px;
+}
+
+.cloud-1 {
+    left: -150px;
+    animation-delay: 0s;
+}
+
+.cloud-2 {
+    left: -150px;
+    top: 100px;
+    animation-delay: 20s;
+}
+
+.cloud-3 {
+    left: -150px;
+    top: 30px;
+    animation-delay: 40s;
+}
+
+@keyframes float-cloud {
+    0% { left: -150px; }
+    100% { left: 100%; }
+}
+
+/* Cityscape content padding to show below the fixed cityscape */
+.cityscape-content {
+    padding-top: 280px;
+    position: relative;
+    z-index: 1;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .deal-card {
@@ -621,5 +872,32 @@ h1, h2, h3, h4, h5, h6 {
     
     .breadcrumb {
         font-size: 0.8rem;
+    }
+    
+    /* Adjust cityscape for mobile */
+    .cityscape-container {
+        height: 200px;
+    }
+    
+    .cityscape-buildings {
+        height: 120px;
+    }
+    
+    .building-1 { height: 80px; }
+    .building-2 { height: 110px; }
+    .building-3 { height: 90px; }
+    .building-4 { height: 120px; }
+    .building-5 { height: 100px; }
+    .building-6 { height: 115px; }
+    .building-7 { height: 85px; }
+    .building-8 { height: 105px; }
+    
+    .celestial-body {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .cityscape-content {
+        padding-top: 190px;
     }
 }

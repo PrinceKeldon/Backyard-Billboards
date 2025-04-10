@@ -31,6 +31,35 @@
     {% block head %}{% endblock %}
 </head>
 <body>
+    <!-- Berlin Cityscape Animation -->
+    <div class="cityscape-container">
+        <div class="cityscape-sky">
+            <!-- Celestial body (sun/moon) will be added via JavaScript -->
+            <div id="celestial-body" class="celestial-body"></div>
+            
+            <!-- Clouds -->
+            <div class="cloud cloud-1"></div>
+            <div class="cloud cloud-2"></div>
+            <div class="cloud cloud-3"></div>
+            
+            <!-- Stars will be added via JavaScript for night time only -->
+            <div id="stars-container"></div>
+        </div>
+        
+        <!-- Berlin building silhouettes -->
+        <div class="cityscape-buildings">
+            <div class="building building-1"></div>
+            <div class="building building-2"></div>
+            <div class="building building-3"></div>
+            <div class="building building-4"></div>
+            <div class="building building-5"></div>
+            <div class="building building-6"></div>
+            <div class="building building-7"></div>
+            <div class="building building-8"></div>
+            <!-- Windows will be added via JavaScript -->
+        </div>
+    </div>
+
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark" id="main-navbar">
         <div class="container">
@@ -63,24 +92,27 @@
         </div>
     </nav>
 
-    <!-- Flash Messages -->
-    <div class="container mt-3">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
+    <!-- Content wrapper with spacing for cityscape -->
+    <div class="cityscape-content">
+        <!-- Flash Messages -->
+        <div class="container mt-3">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
 
-    <!-- Main Content -->
-    <main class="container py-4">
-        {% block content %}{% endblock %}
-    </main>
+        <!-- Main Content -->
+        <main class="container py-4">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
     <!-- Footer -->
     <footer class="footer mt-auto py-3 bg-dark" id="main-footer">
