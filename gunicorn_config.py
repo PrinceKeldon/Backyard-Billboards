@@ -10,21 +10,29 @@ import multiprocessing
 port = os.environ.get("PORT", "5000")
 bind = f"0.0.0.0:{port}"
 
-# Use 4 workers as specified in deployment
-workers = 4
+# Set workers based on available CPU cores - optimal for Replit
+workers = multiprocessing.cpu_count() * 2 + 1
+workers = min(workers, 4)  # Cap at 4 workers maximum for Replit
 
 # Application module - this is the entry point
 wsgi_app = "wsgi:application" 
 
-# Configure timeouts (in seconds)
-timeout = 120
-keepalive = 5
+# Configure timeouts (in seconds) - increased for better reliability
+timeout = 300  # 5 minutes
+keepalive = 60  # 1 minute
 
 # Reuse port (helps with socket issues during restarts)
 reuse_port = True
 
-# Use synchronous workers
+# Use synchronous workers - reliable for Flask
 worker_class = "sync"
+
+# Set maximum number of simultaneous requests per worker
+worker_connections = 1000
+
+# Maximum requests before worker restart to prevent memory leaks
+max_requests = 1000
+max_requests_jitter = 50
 
 # Logging configuration
 accesslog = "-"  # Log to stdout
@@ -40,5 +48,5 @@ daemon = False
 # Simplify application startup
 preload_app = False
 
-# Graceful shutdown timeout
-graceful_timeout = 30
+# Graceful shutdown timeout - increased to match main timeout
+graceful_timeout = 300

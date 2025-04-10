@@ -55,12 +55,28 @@ def page_not_found(e):
 def health_check():
     """Health check endpoint for monitoring"""
     from datetime import datetime
-    return jsonify({
-        "status": "ok", 
-        "timestamp": datetime.now().isoformat(),
-        "app_name": "Backyard Billboards",
-        "version": "1.0.0"
-    })
+    try:
+        # Quick DB connectivity check
+        deals_count = len(deal_db.get_all_deals())
+        gems_count = len(deal_db.get_hidden_gems())
+        
+        return jsonify({
+            "status": "ok", 
+            "timestamp": datetime.now().isoformat(),
+            "app_name": "Backyard Billboards",
+            "version": "1.0.0",
+            "db_status": "connected",
+            "deals_count": deals_count,
+            "hidden_gems_count": gems_count
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "app_name": "Backyard Billboards",
+            "message": str(e)
+        }), 500
 
 # Ensure the app is accessible for testing tools
 @app.after_request
