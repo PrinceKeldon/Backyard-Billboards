@@ -12,3 +12,5 @@ email-validator
 replit
 telegram
 openai
+flask-login
+flask-wtf
