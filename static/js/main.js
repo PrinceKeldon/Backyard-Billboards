@@ -276,28 +276,197 @@ function createBuildingWindows() {
     windowsContainer.id = 'windows-container';
     document.querySelector('.cityscape-buildings').appendChild(windowsContainer);
     
-    buildings.forEach((building, index) => {
+    // Window style types to choose from
+    const windowTypes = [
+        'window-small', 'window-standard', 'window-large',
+        'window-wide', 'window-square', 'window-rounded',
+        'window-arched', 'window-circular'
+    ];
+    
+    buildings.forEach((building, buildingIndex) => {
         const buildingHeight = parseInt(window.getComputedStyle(building).height);
         const buildingWidth = parseInt(window.getComputedStyle(building).width);
         const buildingLeft = building.offsetLeft;
         
-        // Create 3-6 windows per building depending on size
-        const numWindows = Math.floor(Math.random() * 4) + 3;
+        // For TV Tower building (styled as Fernsehturm)
+        if (building.classList.contains('building-4')) {
+            // Add special windows for the TV Tower sphere
+            const sphereCenter = buildingLeft + (buildingWidth / 2);
+            const sphereTop = 35; // Relative to the top of the building
+            
+            // Add 8-10 small circular windows in the sphere
+            const numTowerWindows = Math.floor(Math.random() * 3) + 8;
+            for (let i = 0; i < numTowerWindows; i++) {
+                const windowElement = document.createElement('div');
+                windowElement.classList.add('window', 'window-tv-tower');
+                
+                // Position windows in a circle around the sphere
+                const angle = (i / numTowerWindows) * Math.PI * 2;
+                const radius = 8;
+                const windowLeft = sphereCenter + Math.cos(angle) * radius;
+                const windowTop = sphereTop + Math.sin(angle) * radius;
+                
+                windowElement.style.left = `${windowLeft}px`;
+                windowElement.style.top = `${windowTop}px`;
+                
+                windowsContainer.appendChild(windowElement);
+            }
+        }
         
-        for (let i = 0; i < numWindows; i++) {
-            const window = document.createElement('div');
-            window.classList.add('window');
-            
-            // Random positions for windows, but ensure they're within the building
-            const windowLeft = buildingLeft + Math.floor(Math.random() * (buildingWidth - 15)) + 5;
-            const windowTop = Math.floor(Math.random() * (buildingHeight - 40)) + 20;
-            
-            window.style.left = `${windowLeft}px`;
-            window.style.top = `${windowTop}px`;
-            
-            windowsContainer.appendChild(window);
+        // Determine pattern type for this building
+        const patternType = Math.floor(Math.random() * 3);
+        
+        // Choose a window style for this building
+        // Buildings in groups of 3 will share window styles for visual consistency
+        const windowTypeIndex = Math.floor(buildingIndex / 3) % windowTypes.length;
+        const windowType = windowTypes[windowTypeIndex];
+        
+        // Calculate number of windows based on building size
+        // Larger buildings get more windows
+        const baseWindowCount = 5;
+        const sizeMultiplier = buildingHeight * buildingWidth / 5000;
+        const numWindows = Math.floor(baseWindowCount + sizeMultiplier * 10);
+        
+        // Create the windows
+        if (patternType === 0) {
+            // Grid pattern
+            createGridWindows(building, windowType, numWindows, windowsContainer);
+        } else if (patternType === 1) {
+            // Random pattern
+            createRandomWindows(building, windowType, numWindows, windowsContainer);
+        } else {
+            // Row pattern
+            createRowWindows(building, windowType, numWindows, windowsContainer);
         }
     });
+    
+    // Add special feature: Rooftop lights on some buildings
+    buildings.forEach((building) => {
+        // 30% chance for a building to have a rooftop light
+        if (Math.random() < 0.3) {
+            const buildingWidth = parseInt(window.getComputedStyle(building).width);
+            const buildingLeft = building.offsetLeft;
+            
+            const roofLight = document.createElement('div');
+            roofLight.classList.add('window', 'window-small');
+            
+            // Position at the top of the building
+            roofLight.style.left = `${buildingLeft + (buildingWidth / 2) - 2}px`;
+            roofLight.style.top = `${parseInt(window.getComputedStyle(building).top) - 5}px`;
+            roofLight.style.backgroundColor = 'rgba(255, 0, 0, 0.6)';
+            
+            windowsContainer.appendChild(roofLight);
+        }
+    });
+}
+
+// Create windows in a grid pattern
+function createGridWindows(building, windowType, numWindows, container) {
+    const buildingHeight = parseInt(window.getComputedStyle(building).height);
+    const buildingWidth = parseInt(window.getComputedStyle(building).width);
+    const buildingLeft = building.offsetLeft;
+    const buildingTop = parseInt(window.getComputedStyle(building).top) || 0;
+    
+    // Calculate rows and columns based on building dimensions
+    const cols = Math.max(2, Math.floor(buildingWidth / 15));
+    const rows = Math.max(2, Math.ceil(numWindows / cols));
+    
+    // Calculate spacing
+    const hSpacing = buildingWidth / (cols + 1);
+    const vSpacing = buildingHeight / (rows + 1);
+    
+    // Create windows in a grid
+    for (let row = 1; row <= rows; row++) {
+        for (let col = 1; col <= cols; col++) {
+            // Skip some windows randomly for variety
+            if (Math.random() < 0.2) continue;
+            
+            const windowElement = document.createElement('div');
+            windowElement.classList.add('window', windowType);
+            
+            // Calculate position
+            const windowLeft = buildingLeft + (col * hSpacing);
+            const windowTop = buildingTop + (row * vSpacing);
+            
+            windowElement.style.left = `${windowLeft}px`;
+            windowElement.style.top = `${windowTop}px`;
+            
+            container.appendChild(windowElement);
+        }
+    }
+}
+
+// Create windows in random positions
+function createRandomWindows(building, windowType, numWindows, container) {
+    const buildingHeight = parseInt(window.getComputedStyle(building).height);
+    const buildingWidth = parseInt(window.getComputedStyle(building).width);
+    const buildingLeft = building.offsetLeft;
+    const buildingTop = parseInt(window.getComputedStyle(building).top) || 0;
+    
+    // Get window dimensions to ensure they fit within building
+    const windowWidth = windowType === 'window-wide' ? 14 : (windowType === 'window-large' ? 10 : 8);
+    const windowHeight = windowType === 'window-wide' ? 10 : (windowType === 'window-large' ? 16 : 12);
+    
+    // Create windows in random positions
+    for (let i = 0; i < numWindows; i++) {
+        const windowElement = document.createElement('div');
+        windowElement.classList.add('window', windowType);
+        
+        // Calculate safe area within building
+        const maxLeft = buildingWidth - windowWidth - 4;
+        const maxTop = buildingHeight - windowHeight - 4;
+        
+        // Calculate random position within safe area
+        const windowLeft = buildingLeft + Math.floor(Math.random() * maxLeft) + 4;
+        const windowTop = buildingTop + Math.floor(Math.random() * maxTop) + 4;
+        
+        windowElement.style.left = `${windowLeft}px`;
+        windowElement.style.top = `${windowTop}px`;
+        
+        container.appendChild(windowElement);
+    }
+}
+
+// Create windows in rows
+function createRowWindows(building, windowType, numWindows, container) {
+    const buildingHeight = parseInt(window.getComputedStyle(building).height);
+    const buildingWidth = parseInt(window.getComputedStyle(building).width);
+    const buildingLeft = building.offsetLeft;
+    const buildingTop = parseInt(window.getComputedStyle(building).top) || 0;
+    
+    // Calculate rows and windows per row
+    const rows = Math.min(6, Math.max(3, Math.floor(buildingHeight / 20)));
+    const windowsPerRow = Math.ceil(numWindows / rows);
+    
+    // Get window dimensions
+    const windowWidth = windowType === 'window-wide' ? 14 : (windowType === 'window-large' ? 10 : 8);
+    
+    // Calculate spacing
+    const hSpacing = (buildingWidth - (windowsPerRow * windowWidth)) / (windowsPerRow + 1);
+    const vSpacing = buildingHeight / (rows + 1);
+    
+    // Create windows in rows
+    for (let row = 1; row <= rows; row++) {
+        // Randomly skip some rows
+        if (Math.random() < 0.1) continue;
+        
+        for (let i = 0; i < windowsPerRow; i++) {
+            // Skip some windows randomly for variety
+            if (Math.random() < 0.15) continue;
+            
+            const windowElement = document.createElement('div');
+            windowElement.classList.add('window', windowType);
+            
+            // Calculate position
+            const windowLeft = buildingLeft + (i * windowWidth) + ((i + 1) * hSpacing);
+            const windowTop = buildingTop + (row * vSpacing);
+            
+            windowElement.style.left = `${windowLeft}px`;
+            windowElement.style.top = `${windowTop}px`;
+            
+            container.appendChild(windowElement);
+        }
+    }
 }
 
 // Update windows to be lit during night/evening
@@ -315,17 +484,41 @@ function updateBuildingWindows(isNight, isEvening) {
                 // Set window color based on time
                 if (isNight) {
                     window.style.backgroundColor = 'var(--window-night)';
+                    // Add glow effect for night
+                    window.style.boxShadow = '0 0 5px var(--window-night)';
                 } else if (isEvening) {
                     window.style.backgroundColor = 'var(--window-evening)';
+                    // Add subtle glow effect for evening
+                    window.style.boxShadow = '0 0 3px var(--window-evening)';
                 }
             } else {
                 window.classList.remove('window-lit');
                 window.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                window.style.boxShadow = 'none';
             }
         } else {
             // During day, windows are less visible
             window.classList.remove('window-lit');
             window.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            window.style.boxShadow = 'none';
+        }
+        
+        // Special case for TV tower - always lit
+        if (window.classList.contains('window-tv-tower')) {
+            window.style.backgroundColor = isNight ? 'rgba(255, 220, 120, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+            window.style.boxShadow = isNight ? '0 0 4px rgba(255, 220, 120, 0.8)' : 'none';
+        }
+        
+        // Rooftop lights always on at night - safety lights for aircraft
+        if (window.style.backgroundColor === 'rgba(255, 0, 0, 0.6)') {
+            if (isNight) {
+                window.style.boxShadow = '0 0 8px red';
+                // Make it blink
+                window.style.animation = 'twinkle 2s infinite';
+            } else {
+                window.style.boxShadow = 'none';
+                window.style.animation = 'none';
+            }
         }
     });
 }
