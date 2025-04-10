@@ -370,13 +370,18 @@ def login():
 def signup():
     if request.method == 'POST':
         username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
         
-        if User.create(username, password):
+        if not username or not email or not password:
+            flash('All fields are required.', 'danger')
+            return render_template('signup.html')
+            
+        if User.create(username, email, password):
             flash('Account created successfully. Please login.', 'success')
             return redirect(url_for('login'))
             
-        flash('Username already exists.', 'danger')
+        flash('Username or email already exists.', 'danger')
     return render_template('signup.html')
 
 @app.route('/logout')

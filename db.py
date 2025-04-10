@@ -7,14 +7,19 @@ logger = logging.getLogger(__name__)
 class DealDB:
     """Database class for managing happy hour deals and users"""
     
-    def add_user(self, username, password_hash):
+    def add_user(self, username, email, password_hash):
         """Add a new user"""
         try:
-            if username in self.db:
-                return False
+            # Check if username or email already exists
+            for user_data in self.db.values():
+                if isinstance(user_data, dict):
+                    if user_data.get('username') == username or user_data.get('email') == email:
+                        return False
+                        
             self.db[username] = {
                 "password_hash": password_hash,
-                "username": username
+                "username": username,
+                "email": email
             }
             return True
         except Exception as e:
