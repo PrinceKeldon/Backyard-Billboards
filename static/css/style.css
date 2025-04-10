@@ -143,14 +143,14 @@ html, body {
     border-bottom: none;
     padding: 0.8rem 1rem;
     letter-spacing: 0.02em;
-    /* Add a slightly lighter background for contrast with black text */
+    /* Add a slightly lighter background for contrast with white text */
     background: linear-gradient(to right, #8f2a38, #9f2f3f);
 }
 
 .deal-card .card-header h5 {
-    color: #000000 !important;
+    color: white !important;
     font-weight: 800 !important;
-    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     transition: all 0.2s ease-in-out;
     position: relative;
     padding: 2px 0;
