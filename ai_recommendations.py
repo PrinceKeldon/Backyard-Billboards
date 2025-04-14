@@ -5,6 +5,7 @@ Uses OpenAI GPT to provide personalized venue recommendations
 import os
 import json
 import logging
+import httpx
 from openai import OpenAI
 
 # Configure logging
@@ -66,102 +67,274 @@ def get_ai_recommendation(user_preferences, deals):
         dict: Recommendation results with keys 'recommendations' (list), 'reasoning' (str)
     """
     try:
-        # Prepare the list of venues for the AI to consider
-        venues_data = []
-        for deal in deals:
-            venue_info = {
-                "business_name": deal.get("business_name", "Unknown"),
-                "district": deal.get("district", "Unknown"),
-                "deal": deal.get("deal", ""),
-                "location": deal.get("location", ""),
-                "place_type": deal.get("place_type", ""),
-                "votes": deal.get("votes", 0),
-                "rating": deal.get("rating", None),
-                "price_level": deal.get("price_level", None)
+        # Validate input data first
+        if not deals or len(deals) == 0:
+            logger.error("No deals available for recommendations")
+            return {
+                "recommendations": _get_fallback_recommendations(deals, user_preferences),
+                "reasoning": "No venues are currently available. Please try again later or add more venues."
             }
-            venues_data.append(venue_info)
+
+        # Pre-process preferences to normalize and clean data
+        clean_preferences = _sanitize_preferences(user_preferences)
         
-        # Create prompt for AI
-        prompt = f"""
-        As an AI recommendation engine for happy hour deals in Berlin, your task is to analyze venues and recommend the best ones that match the user's preferences.
+        # Apply smart filtering based on preferences
+        filtered_deals = _pre_filter_deals(deals, clean_preferences)
         
-        USER PREFERENCES:
-        {json.dumps(user_preferences, indent=2)}
+        # If we don't have enough venues after filtering, include some popular ones
+        if len(filtered_deals) < 3:
+            # Add popular venues that weren't included in the filtered set
+            popular_deals = sorted([d for d in deals if d not in filtered_deals], 
+                                  key=lambda x: x.get("votes", 0), 
+                                  reverse=True)[:5]
+            filtered_deals.extend(popular_deals)
+            
+        # Limit to 8 venues maximum to reduce API call size but ensure enough variety
+        filtered_deals = filtered_deals[:8]
         
-        AVAILABLE VENUES (up to 30 venues):
-        {json.dumps(venues_data[:30], indent=2)}
+        # Prepare simplified venue data for the AI
+        venues_data = _prepare_venue_data(filtered_deals)
         
-        Based on the user's preferences, provide:
-        1. A ranked list of up to 3 top recommendations
-        2. A brief explanation for each recommendation
-        3. A short summary of your reasoning
-        
-        Respond with JSON in this format:
-        {{
-            "recommendations": [
-                {{
-                    "business_name": "Venue Name",
-                    "explanation": "Brief explanation why this venue matches preferences"
-                }},
-                ...
-            ],
-            "reasoning": "Overall explanation of your recommendation strategy"
-        }}
-        """
-        
-        # Get recommendation from OpenAI
-        # The newest OpenAI model is "gpt-4o" which was released May 13, 2024.
-        # Do not change this unless explicitly requested by the user
+        # Create a more structured and concise prompt
+        prompt = _create_recommendation_prompt(clean_preferences, venues_data)
         
         # Get or create the OpenAI client
         client = get_openai_client()
         if not client:
             logger.error("OpenAI client is not initialized or API key is missing")
-            raise ValueError("OpenAI API key is missing. Cannot generate recommendations.")
-            
+            return {
+                "recommendations": _get_fallback_recommendations(deals, clean_preferences),
+                "reasoning": "AI recommendations are currently unavailable. We've selected some popular venues for you instead."
+            }
+        
+        # Reduced timeout to 20 seconds to prevent long waits
+        timeout = httpx.Timeout(20.0, connect=5.0)
+        
+        # The newest OpenAI model is "gpt-4o" which was released May 13, 2024.
+        # Do not change this unless explicitly requested by the user
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role": "system", "content": "You are an AI recommendation engine specializing in Berlin's bar and restaurant scene."},
-                     {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": "You are an AI recommendation engine specializing in Berlin's bar and restaurant scene. Provide concise and accurate recommendations based on user preferences."},
+                {"role": "user", "content": prompt}
+            ],
             response_format={"type": "json_object"},
-            max_tokens=1000
+            max_tokens=400,  # Further reduced token count for faster response
+            timeout=timeout
         )
         
-        # Parse the response
-        result = json.loads(response.choices[0].message.content)
+        # Parse the response with error handling
+        try:
+            result = json.loads(response.choices[0].message.content)
+        except (json.JSONDecodeError, IndexError, AttributeError) as e:
+            logger.error(f"Error parsing AI response: {str(e)}")
+            return {
+                "recommendations": _get_fallback_recommendations(deals, clean_preferences),
+                "reasoning": "We couldn't process the AI recommendations. Here are some popular venues instead."
+            }
         
-        # Match the recommendations with full deal data to include all details
-        matched_recommendations = []
-        for rec in result.get("recommendations", []):
-            rec_name = rec.get("business_name")
-            if not rec_name:
-                continue
-                
-            # Find the full deal data for this recommendation
-            matched_deal = None
-            for deal in deals:
-                if deal.get("business_name") == rec_name:
-                    matched_deal = deal
-                    break
-            
-            if matched_deal:
-                # Include the AI explanation in the deal object
-                matched_deal["explanation"] = rec.get("explanation", "")
-                matched_recommendations.append(matched_deal)
+        # Match recommendations with full venue data
+        matched_recommendations = _match_recommendations_with_deals(result, deals)
         
-        # Return the updated result with full deal objects
+        # If no valid recommendations were found, use fallback
+        if not matched_recommendations:
+            logger.warning("No valid recommendations matched with available deals")
+            return {
+                "recommendations": _get_fallback_recommendations(deals, clean_preferences),
+                "reasoning": "Our AI couldn't match your preferences with available venues. Here are some popular alternatives."
+            }
+        
+        # Return the recommendations with reasoning
         return {
             "recommendations": matched_recommendations,
-            "reasoning": result.get("reasoning", "")
+            "reasoning": result.get("reasoning", "Based on your preferences, we've selected these venues for you.")
         }
         
+    except httpx.TimeoutException:
+        logger.error("OpenAI API request timed out after 20 seconds")
+        return {
+            "recommendations": _get_fallback_recommendations(deals, user_preferences),
+            "reasoning": "The recommendation request timed out. We've selected some popular venues for you instead."
+        }
     except Exception as e:
         logger.error(f"Error getting AI recommendation: {str(e)}")
-        # Return a fallback recommendation if AI fails
         return {
-            "recommendations": [],
-            "reasoning": f"Could not generate recommendations due to an error: {str(e)}"
+            "recommendations": _get_fallback_recommendations(deals, user_preferences),
+            "reasoning": "We couldn't generate AI recommendations. Here are some popular options that might interest you."
         }
+
+def _sanitize_preferences(preferences):
+    """Clean and normalize user preferences"""
+    clean_prefs = {}
+    
+    # Copy and sanitize each preference
+    for key, value in preferences.items():
+        if isinstance(value, str):
+            clean_value = value.strip()
+            if clean_value:  # Only include non-empty values
+                clean_prefs[key] = clean_value
+    
+    return clean_prefs
+
+def _pre_filter_deals(deals, preferences):
+    """Apply smart filtering based on user preferences"""
+    filtered_deals = deals.copy()
+    
+    # Filter by district if specified
+    district_pref = preferences.get("district", "").lower()
+    if district_pref:
+        district_matches = [d for d in deals if d.get("district") and d.get("district").lower() == district_pref]
+        if district_matches:
+            filtered_deals = district_matches
+    
+    # Apply additional filters based on other preferences
+    vibe_pref = preferences.get("vibe", "").lower()
+    drink_pref = preferences.get("drink_preference", "").lower()
+    
+    # Score each deal based on preference match
+    scored_deals = []
+    for deal in filtered_deals:
+        score = 0
+        deal_text = deal.get("deal", "").lower()
+        
+        # Score based on votes (popular venues get a boost)
+        score += min(deal.get("votes", 0), 10) / 2
+        
+        # Score based on drink preference match
+        if drink_pref and drink_pref in deal_text:
+            score += 3
+            
+        # Simple vibe matching based on keyword presence in deal text
+        if vibe_pref:
+            vibe_keywords = {
+                "casual": ["casual", "relaxed", "chill", "cozy"],
+                "trendy": ["trendy", "hip", "modern", "stylish"],
+                "upscale": ["upscale", "elegant", "sophisticated", "luxurious"],
+                "alternative": ["alternative", "unique", "creative", "indie"],
+                "social": ["social", "lively", "buzzing", "vibrant"]
+            }
+            
+            # Check if any keywords for the selected vibe appear in the deal text
+            if vibe_pref in vibe_keywords:
+                for keyword in vibe_keywords[vibe_pref]:
+                    if keyword in deal_text:
+                        score += 2
+                        break
+        
+        scored_deals.append((deal, score))
+    
+    # Sort by score (highest first) and return the deals
+    return [deal for deal, score in sorted(scored_deals, key=lambda x: x[1], reverse=True)]
+
+def _prepare_venue_data(deals):
+    """Prepare simplified venue data for the AI"""
+    venues_data = []
+    for deal in deals:
+        venue_info = {
+            "business_name": deal.get("business_name", "Unknown"),
+            "district": deal.get("district", "Unknown"),
+            "deal": deal.get("deal", ""),
+            # Include only essential info to reduce prompt size
+            "place_type": deal.get("place_type", ""),
+        }
+        venues_data.append(venue_info)
+    return venues_data
+
+def _create_recommendation_prompt(preferences, venues_data):
+    """Create a structured and concise prompt for the AI"""
+    # Create a simpler, more focused prompt
+    prompt = f"""
+    As Berlin's nightlife recommendation expert, find venues matching these preferences:
+    {json.dumps(preferences, indent=2)}
+    
+    Available venues (limited selection):
+    {json.dumps(venues_data, indent=2)}
+    
+    Respond with JSON only:
+    {{
+      "recommendations": [
+        {{
+          "business_name": "Venue Name",
+          "explanation": "Brief reason why this venue matches preferences"
+        }}
+      ],
+      "reasoning": "Short explanation of your recommendation logic"
+    }}
+    
+    Include 1-3 best matching venues and keep explanations under 30 words each.
+    """
+    return prompt
+
+def _match_recommendations_with_deals(ai_result, all_deals):
+    """Match AI recommendations with full deal data"""
+    matched_recommendations = []
+    
+    # Handle potential issues with AI response structure
+    recommendations = ai_result.get("recommendations", [])
+    if not isinstance(recommendations, list):
+        logger.error("AI did not return a list of recommendations")
+        return []
+    
+    # Process each recommendation
+    for rec in recommendations:
+        if not isinstance(rec, dict):
+            continue
+            
+        rec_name = rec.get("business_name")
+        if not rec_name:
+            continue
+            
+        # Find the matching deal
+        matched_deal = None
+        for deal in all_deals:
+            if deal.get("business_name") == rec_name:
+                matched_deal = deal.copy()  # Create a copy to avoid modifying original
+                break
+        
+        if matched_deal:
+            # Add the explanation
+            matched_deal["explanation"] = rec.get("explanation", "")
+            matched_recommendations.append(matched_deal)
+    
+    return matched_recommendations
+
+def _get_fallback_recommendations(deals, preferences=None):
+    """Get fallback recommendations when AI fails"""
+    if not deals:
+        return []
+        
+    fallback_deals = []
+    
+    # Try to match district if specified
+    if preferences and preferences.get("district"):
+        district = preferences.get("district").lower()
+        district_matches = [d for d in deals if d.get("district") and d.get("district").lower() == district]
+        
+        if district_matches:
+            # Sort by votes within the district
+            sorted_district = sorted(district_matches, key=lambda x: x.get("votes", 0), reverse=True)
+            for deal in sorted_district[:3]:
+                deal_copy = deal.copy()
+                deal_copy["explanation"] = f"Popular venue in {deal.get('district', 'Berlin')}"
+                fallback_deals.append(deal_copy)
+    
+    # If we don't have enough district matches, add top rated overall
+    if len(fallback_deals) < 3:
+        # Sort all deals by votes
+        top_deals = sorted(deals, key=lambda x: x.get("votes", 0), reverse=True)
+        
+        # Add top voted deals not already included
+        for deal in top_deals:
+            if len(fallback_deals) >= 3:
+                break
+                
+            # Check if already included
+            if not any(d.get("business_name") == deal.get("business_name") for d in fallback_deals):
+                deal_copy = deal.copy()
+                deal_copy["explanation"] = f"Highly rated venue in {deal.get('district', 'Berlin')}"
+                fallback_deals.append(deal_copy)
+    
+    return fallback_deals
 
 def get_venue_description(business_name, deal_text, district, place_type):
     """
@@ -203,15 +376,26 @@ def get_venue_description(business_name, deal_text, district, place_type):
             logger.error("OpenAI client is not initialized or API key is missing")
             raise ValueError("OpenAI API key is missing. Cannot generate venue description.")
             
+        # Use timeout for venue description generation as well
+        timeout = httpx.Timeout(20.0, connect=5.0)
+        
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "system", "content": "You are a creative writer specializing in Berlin's nightlife scene."},
                      {"role": "user", "content": prompt}],
-            max_tokens=300
+            max_tokens=300,
+            timeout=timeout
         )
         
         return response.choices[0].message.content.strip()
         
+    except httpx.TimeoutException:
+        logger.error("OpenAI API request timed out while generating venue description")
+        # Return a more specific timeout error message
+        if district:
+            return f"{business_name} is a popular spot in {district} offering happy hour deals. Visit for their special: {deal_text}"
+        else:
+            return f"{business_name} is a popular venue in Berlin offering happy hour deals. Their special: {deal_text}"
     except Exception as e:
         logger.error(f"Error generating venue description: {str(e)}")
         # Return a fallback description if AI fails

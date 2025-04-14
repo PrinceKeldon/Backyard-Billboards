@@ -1,0 +1,107 @@
+<div class="modal fade" id="aiRecommendationModal" tabindex="-1" aria-labelledby="aiRecommendationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aiRecommendationModalLabel"><i class="fas fa-magic me-2"></i>AI Venue Recommendations</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('ai_recommendation') }}" method="POST" id="aiRecommendationForm">
+                <div class="modal-body">
+                    <p class="mb-3">Tell us your preferences, and our AI will recommend the perfect venues for you!</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="ai_district" class="form-label">Preferred District</label>
+                            <select class="form-select" id="ai_district" name="district">
+                                <option value="">Any District</option>
+                                {% for district in districts %}
+                                <option value="{{ district }}">{{ district }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="ai_price_range" class="form-label">Price Range</label>
+                            <select class="form-select" id="ai_price_range" name="price_range">
+                                <option value="">Any Price Range</option>
+                                <option value="budget">Budget-friendly</option>
+                                <option value="mid-range">Mid-range</option>
+                                <option value="upscale">Upscale</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="ai_vibe" class="form-label">Preferred Vibe</label>
+                            <select class="form-select" id="ai_vibe" name="vibe">
+                                <option value="">Any Vibe</option>
+                                <option value="casual">Casual & Relaxed</option>
+                                <option value="trendy">Trendy & Hip</option>
+                                <option value="upscale">Upscale & Elegant</option>
+                                <option value="alternative">Alternative & Unique</option>
+                                <option value="social">Social & Lively</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="ai_drink_preference" class="form-label">Drink Preference</label>
+                            <select class="form-select" id="ai_drink_preference" name="drink_preference">
+                                <option value="">Any Drinks</option>
+                                <option value="beer">Beer</option>
+                                <option value="wine">Wine</option>
+                                <option value="cocktails">Cocktails</option>
+                                <option value="craft">Craft Beer</option>
+                                <option value="spirits">Spirits</option>
+                                <option value="non-alcoholic">Non-Alcoholic Options</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="ai_food_preference" class="form-label">Food Preference</label>
+                            <select class="form-select" id="ai_food_preference" name="food_preference">
+                                <option value="">Any Food</option>
+                                <option value="snacks">Bar Snacks</option>
+                                <option value="tapas">Tapas</option>
+                                <option value="german">German</option>
+                                <option value="international">International</option>
+                                <option value="vegetarian">Vegetarian/Vegan</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="ai_time_preference" class="form-label">Time Preference</label>
+                            <select class="form-select" id="ai_time_preference" name="time_preference">
+                                <option value="">Any Time</option>
+                                <option value="early">Early (4PM-6PM)</option>
+                                <option value="mid">Mid (6PM-8PM)</option>
+                                <option value="late">Late (After 8PM)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Results container (initially hidden) -->
+                    <div id="recommendationResults" class="mt-4" style="display: none;">
+                        <div class="bg-dark p-3 rounded mb-3">
+                            <h5 class="text-light mb-3">Your Personalized Recommendations</h5>
+                            <div id="recommendationList" class="list-group"></div>
+                        </div>
+                        <div class="bg-secondary bg-opacity-10 p-3 rounded">
+                            <h6>Why we recommended these venues:</h6>
+                            <p id="recommendationReasoning" class="text-muted"></p>
+                        </div>
+                    </div>
+                </div>
+                <div id="recommendationError" class="alert alert-warning d-none mx-3 mb-3">
+                    Error message will appear here
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger d-none" id="cancelRecommendationBtn">
+                        <i class="fas fa-times me-1"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="getRecommendationsBtn">
+                        <i class="fas fa-wand-magic-sparkles me-1"></i> Get Recommendations
+                    </button>
+                </div>
+            </form>
+        </div>

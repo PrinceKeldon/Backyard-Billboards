@@ -726,7 +726,7 @@ def remove_austin_texas():
 
 # Note: We've already defined page_not_found handler earlier
 
-@app.route("/ai-recommendation", methods=["POST"])
+@app.route("/ai_recommendation", methods=["POST"])
 def ai_recommendation():
     """Route to get AI-powered venue recommendations based on user preferences"""
     try:

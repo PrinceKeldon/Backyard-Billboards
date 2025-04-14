@@ -16,3 +16,4 @@ flask-login
 flask-wtf
 flask-login
 werkzeug
+httpx
