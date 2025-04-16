@@ -10,7 +10,7 @@ port = int(os.environ.get("PORT", 5000))
 bind = f"0.0.0.0:{port}"
 
 # Specify the application - use 'application' as that's the standard name
-wsgi_app = "wsgi:application"
+# wsgi_app = "wsgi:application"  # This is redundant as it's specified in the run command
 
 # Set workers based on CPU cores
 workers = multiprocessing.cpu_count() * 2 + 1
