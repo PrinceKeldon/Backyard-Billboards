@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Add Event - Backyard Billboards{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="mb-0"><i class="fas fa-calendar-plus me-2 text-danger"></i>Add Club Event</h1>
+                <a href="{{ url_for('hot_now') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Events
+                </a>
+            </div>
+            <p class="text-muted">Add a new club event to the Hot Now billboard</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0">Event Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('add_event') }}" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="event_name" class="form-label">Event Name<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="event_name" name="event_name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="venue" class="form-label">Venue/Club<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="venue" name="venue" required>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="district" class="form-label">District<span class="text-danger">*</span></label>
+                                <select class="form-select" id="district" name="district" required>
+                                    <option value="" selected disabled>Select a district</option>
+                                    {% for district in districts %}
+                                    <option value="{{ district }}">{{ district }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="event_date" class="form-label">Date<span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="event_date" name="event_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="event_time" class="form-label">Time<span class="text-danger">*</span></label>
+                                <input type="time" class="form-control" id="event_time" name="event_time" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="event_url" class="form-label">Event URL</label>
+                            <input type="url" class="form-control" id="event_url" name="event_url" placeholder="https://...">
+                            <small class="text-muted">Link to event details page or ticket sales</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="event_image" class="form-label">Event Image</label>
+                            <input type="file" class="form-control" id="event_image" name="event_image" accept="image/*">
+                            <small class="text-muted">Upload a promotional image for the event (optional)</small>
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="reset" class="btn btn-outline-secondary me-2">Reset</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-plus-circle me-1"></i> Add Event
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0">Admin Actions</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Other ways to add events to the billboard:</p>
+                    <form method="post" action="{{ url_for('scrape_events') }}" class="d-grid gap-2">
+                        <button type="submit" class="btn btn-outline-info">
+                            <i class="fas fa-robot me-1"></i> Auto-Scrape Events 
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0">Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="text-muted">
+                        <li>All events automatically expire after they end</li>
+                        <li>Only events within the next 48 hours will be shown on the billboard</li>
+                        <li>High-quality images improve engagement</li>
+                        <li>Be descriptive but concise - provide essential details only</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set default date to today
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        
+        const formattedToday = `${yyyy}-${mm}-${dd}`;
+        document.getElementById('event_date').value = formattedToday;
+        
+        // Set default time to evening (20:00)
+        document.getElementById('event_time').value = '20:00';
+    });
+</script>
+{% endblock %}
