@@ -298,6 +298,153 @@ def delete_event():
         flash(f"Error deleting event: {str(e)}", "danger")
         return redirect(url_for("admin_events"))
 
+@app.route("/submit-event", methods=["GET", "POST"])
+@login_required
+def submit_event():
+    """Route for users to submit events for approval"""
+    try:
+        if request.method == "POST":
+            # Get form data
+            event_name = request.form.get("event_name")
+            club_name = request.form.get("club_name")
+            location = request.form.get("location")
+            district = request.form.get("district")
+            description = request.form.get("description")
+            start_time = request.form.get("start_time")
+            end_time = request.form.get("end_time")
+            image_url = request.form.get("image_url")
+            
+            # Validate required fields
+            if not event_name or not club_name or not location:
+                flash("Event name, club name, and location are required", "danger")
+                return redirect(url_for("submit_event"))
+            
+            # Add the event to the database as pending
+            deal_db.add_pending_event(
+                event_name=event_name,
+                club_name=club_name,
+                location=location,
+                district=district,
+                image_url=image_url,
+                start_time=start_time,
+                end_time=end_time,
+                description=description,
+                submitted_by=current_user.username
+            )
+            
+            flash("Event submitted successfully! It will be reviewed by an admin.", "success")
+            return redirect(url_for("hot_now"))
+        
+        # GET request - show the form
+        # Get all Berlin districts for the dropdown
+        berlin_districts = [
+            "Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg", 
+            "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten",
+            "Lichtenberg", "Köpenick", "Spandau", "Steglitz", "Marzahn", "Wilmersdorf",
+            "Tempelhof", "Treptow", "Pankow", "Reinickendorf", "Zehlendorf"
+        ]
+        berlin_districts.sort()
+        
+        # Get count of hidden gems for the navigation badge
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+        
+        return render_template(
+            "submit_event.html", 
+            districts=berlin_districts,
+            hidden_gems_count=hidden_gems_count
+        )
+    
+    except Exception as e:
+        logger.error(f"Error submitting event: {str(e)}")
+        flash(f"Error submitting event: {str(e)}", "danger")
+        return redirect(url_for("hot_now"))
+
+@app.route("/admin/pending-events")
+@login_required
+def pending_events():
+    """Route to display pending events for admin approval"""
+    # Check if user is admin
+    if not current_user.is_admin:
+        flash("You don't have permission to access this page", "danger")
+        return redirect(url_for("home"))
+    
+    try:
+        # Get all pending events
+        pending_events = deal_db.get_pending_events()
+        
+        # Get count of hidden gems for the navigation badge
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+        
+        return render_template(
+            "pending_events.html", 
+            pending_events=pending_events,
+            hidden_gems_count=hidden_gems_count
+        )
+    
+    except Exception as e:
+        logger.error(f"Error displaying pending events: {str(e)}")
+        flash(f"Error displaying pending events: {str(e)}", "danger")
+        return redirect(url_for("admin_events"))
+
+@app.route("/admin/approve-event", methods=["POST"])
+@login_required
+def approve_event():
+    """Route to approve a pending event"""
+    # Check if user is admin
+    if not current_user.is_admin:
+        flash("You don't have permission to access this feature", "danger")
+        return redirect(url_for("home"))
+    
+    try:
+        event_key = request.form.get("event_key")
+        
+        if not event_key:
+            flash("Event key is required", "danger")
+            return redirect(url_for("pending_events"))
+        
+        # Approve the event
+        if deal_db.approve_pending_event(event_key):
+            flash("Event approved successfully!", "success")
+        else:
+            flash("Event not found or could not be approved", "warning")
+        
+        return redirect(url_for("pending_events"))
+    
+    except Exception as e:
+        logger.error(f"Error approving event: {str(e)}")
+        flash(f"Error approving event: {str(e)}", "danger")
+        return redirect(url_for("pending_events"))
+
+@app.route("/admin/reject-event", methods=["POST"])
+@login_required
+def reject_event():
+    """Route to reject a pending event"""
+    # Check if user is admin
+    if not current_user.is_admin:
+        flash("You don't have permission to access this feature", "danger")
+        return redirect(url_for("home"))
+    
+    try:
+        event_key = request.form.get("event_key")
+        rejection_reason = request.form.get("rejection_reason")
+        
+        if not event_key:
+            flash("Event key is required", "danger")
+            return redirect(url_for("pending_events"))
+        
+        # Reject the event
+        if deal_db.reject_pending_event(event_key, rejection_reason):
+            flash("Event rejected", "success")
+        else:
+            flash("Event not found or could not be rejected", "warning")
+        
+        return redirect(url_for("pending_events"))
+    
+    except Exception as e:
+        logger.error(f"Error rejecting event: {str(e)}")
+        flash(f"Error rejecting event: {str(e)}", "danger")
+        return redirect(url_for("pending_events"))
+
 @app.route("/")
 def home():
     """Home page route - displays all deals with filtering options"""

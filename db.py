@@ -1,5 +1,5 @@
 import replit
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -328,11 +328,11 @@ class DealDB:
         """
         try:
             # Generate a timestamp for when the event was added
-            now = datetime.datetime.now()
+            now = datetime.now()
             created_at = now.strftime("%Y-%m-%d %H:%M:%S.%f")
             
             # Calculate expiration time (48 hours from now)
-            expiration_time = (now + datetime.timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S.%f")
+            expiration_time = (now + timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S.%f")
             
             # Create the event data
             event_data = {
@@ -372,7 +372,7 @@ class DealDB:
             list: List of active events
         """
         try:
-            now = datetime.datetime.now()
+            now = datetime.now()
             now_str = now.strftime("%Y-%m-%d %H:%M:%S.%f")
             
             events = []
@@ -425,7 +425,7 @@ class DealDB:
             int: Number of deleted events
         """
         try:
-            now = datetime.datetime.now()
+            now = datetime.now()
             now_str = now.strftime("%Y-%m-%d %H:%M:%S.%f")
             
             deleted_count = 0
@@ -484,6 +484,187 @@ class DealDB:
                 return False
         except Exception as e:
             logger.error(f"Error deleting event: {str(e)}")
+            return False
+            
+    def add_pending_event(self, event_name, club_name, location, district=None, 
+                       image_url=None, start_time=None, end_time=None, description=None, 
+                       submitted_by=None):
+        """
+        Add a club event pending admin approval
+        
+        Args:
+            event_name (str): Name of the event
+            club_name (str): Name of the club
+            location (str): Location of the club
+            district (str, optional): District/neighborhood
+            image_url (str, optional): URL to event image
+            start_time (str, optional): Event start time
+            end_time (str, optional): Event end time
+            description (str, optional): Event description
+            submitted_by (str, optional): Username of submitter
+            
+        Returns:
+            dict: The added pending event data
+        """
+        try:
+            # Generate a timestamp for when the event was submitted
+            now = datetime.now()
+            submitted_at = now.strftime("%Y-%m-%d %H:%M:%S.%f")
+            
+            # Create the pending event data
+            event_data = {
+                "event_name": event_name,
+                "club_name": club_name,
+                "location": location,
+                "district": district,
+                "image_url": image_url,
+                "start_time": start_time,
+                "end_time": end_time,
+                "description": description,
+                "submitted_by": submitted_by,
+                "submitted_at": submitted_at,
+                "status": "pending"  # pending, approved, rejected
+            }
+            
+            # Store in the database with a special prefix
+            safe_key = self._safe_key(f"pending_event:{event_name}_{club_name}")
+            self.db[safe_key] = event_data
+            
+            logger.info(f"Added pending event: {event_name} at {club_name} by {submitted_by}")
+            return event_data
+        
+        except Exception as e:
+            logger.error(f"Error adding pending event: {str(e)}")
+            raise
+            
+    def get_pending_events(self):
+        """
+        Get all pending events awaiting admin approval
+        
+        Returns:
+            list: List of pending events
+        """
+        try:
+            pending_events = []
+            
+            # Iterate through all keys
+            for key in list(self.db.keys()):
+                # Check if this is a pending event
+                if key.startswith("pending_event:"):
+                    try:
+                        event_data = self.db[key]
+                        
+                        # Add the key to the data for reference
+                        event_data["db_key"] = key
+                        
+                        # Add to the list if status is pending
+                        if event_data.get("status") == "pending":
+                            pending_events.append(event_data)
+                    except Exception as e:
+                        logger.error(f"Error processing pending event key {key}: {str(e)}")
+            
+            # Sort events by submission time (newest first)
+            pending_events = sorted(pending_events, key=lambda x: x.get("submitted_at", ""), reverse=True)
+            
+            logger.debug(f"Returning {len(pending_events)} pending events")
+            return pending_events
+        
+        except Exception as e:
+            logger.error(f"Error getting pending events: {str(e)}")
+            raise
+            
+    def approve_pending_event(self, event_key):
+        """
+        Approve a pending event and make it active
+        
+        Args:
+            event_key (str): Key of the pending event to approve
+            
+        Returns:
+            bool: Whether the approval was successful
+        """
+        try:
+            if event_key in self.db:
+                # Get the pending event data
+                event_data = self.db[event_key]
+                
+                # Generate a timestamp for when the event was approved
+                now = datetime.now()
+                approved_at = now.strftime("%Y-%m-%d %H:%M:%S.%f")
+                
+                # Calculate expiration time (48 hours from now)
+                expiration_time = (now + timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S.%f")
+                
+                # Prepare data for the approved event
+                approved_event = {
+                    "event_name": event_data.get("event_name"),
+                    "club_name": event_data.get("club_name"),
+                    "location": event_data.get("location"),
+                    "district": event_data.get("district"),
+                    "image_url": event_data.get("image_url"),
+                    "start_time": event_data.get("start_time"),
+                    "end_time": event_data.get("end_time"),
+                    "description": event_data.get("description"),
+                    "submitted_by": event_data.get("submitted_by"),
+                    "created_at": approved_at,
+                    "expires_at": expiration_time,
+                    "is_active": True
+                }
+                
+                # Create a new active event
+                event_name = event_data.get("event_name")
+                active_key = self._safe_key(f"event:{event_name}")
+                self.db[active_key] = approved_event
+                
+                # Update the status of the pending event
+                event_data["status"] = "approved"
+                event_data["approved_at"] = approved_at
+                self.db[event_key] = event_data
+                
+                logger.info(f"Approved pending event: {event_name}")
+                return True
+            else:
+                logger.warning(f"Pending event not found with key: {event_key}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error approving pending event: {str(e)}")
+            return False
+            
+    def reject_pending_event(self, event_key, rejection_reason=None):
+        """
+        Reject a pending event
+        
+        Args:
+            event_key (str): Key of the pending event to reject
+            rejection_reason (str, optional): Reason for rejection
+            
+        Returns:
+            bool: Whether the rejection was successful
+        """
+        try:
+            if event_key in self.db:
+                # Get the pending event data
+                event_data = self.db[event_key]
+                
+                # Update the status
+                event_data["status"] = "rejected"
+                event_data["rejected_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+                
+                if rejection_reason:
+                    event_data["rejection_reason"] = rejection_reason
+                
+                # Update the event in the database
+                self.db[event_key] = event_data
+                
+                logger.info(f"Rejected pending event: {event_data.get('event_name')}")
+                return True
+            else:
+                logger.warning(f"Pending event not found with key: {event_key}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error rejecting pending event: {str(e)}")
             return False
             
     def get_late_night_deals(self, limit=None):
