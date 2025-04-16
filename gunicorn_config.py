@@ -9,8 +9,8 @@ import multiprocessing
 port = int(os.environ.get("PORT", 5000))
 bind = f"0.0.0.0:{port}"
 
-# Specify the application - use 'app' as that's the variable name in wsgi.py
-wsgi_app = "wsgi:app"
+# Specify the application - use 'application' as that's the standard name
+wsgi_app = "wsgi:application"
 
 # Set workers based on CPU cores
 workers = multiprocessing.cpu_count() * 2 + 1
