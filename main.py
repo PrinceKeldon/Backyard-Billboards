@@ -1,9 +1,11 @@
 """
 Development entry point for Backyard Billboards
-This is only used when running the app directly for development
+For development use only - production deployment uses wsgi.py
 """
+# Simply import the WSGI application from wsgi.py for consistency
+# This ensures main.py and wsgi.py use exactly the same application object
+from wsgi import application as app
 import os
-from app import app
 
 # This is only used when running this file directly for development
 if __name__ == "__main__":
