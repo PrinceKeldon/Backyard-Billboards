@@ -117,8 +117,9 @@ def get_cached_data(key, fetch_func, *args, **kwargs):
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "backyard-billboards-local-dev-secret-key")
 
-# Keep the 'app' name for Flask - WSGI configuration is in wsgi.py
-# Do not define 'application' here to avoid confusion with the WSGI entry point
+# Configure the app with deployment-friendly settings
+app.config["PROPAGATE_EXCEPTIONS"] = True
+app.config["PREFERRED_URL_SCHEME"] = "https"
 
 # Initialize Flask-Login
 login_manager = LoginManager()

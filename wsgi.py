@@ -3,11 +3,13 @@
 WSGI entry point for Replit deployment
 This is the file that gunicorn uses as its entry point
 """
-# Import the Flask application from app.py
-from app import app
-
-# Create the WSGI application object - this name is required by Gunicorn
-application = app
+# Import the Flask application
+try:
+    from app import app as application
+except ImportError as e:
+    import sys
+    print(f"ERROR: Failed to import app: {e}", file=sys.stderr)
+    raise
 
 # For direct execution during development
 if __name__ == "__main__":
