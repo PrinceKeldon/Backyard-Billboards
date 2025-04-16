@@ -46,6 +46,9 @@
                             <option value="{{ district }}" {% if current_district == district %}selected{% endif %}>{{ district }}</option>
                             {% endfor %}
                         </select>
+                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
                     </div>
                 </div>
                 
