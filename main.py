@@ -1,10 +1,8 @@
 """
 Development entry point for Backyard Billboards
-For development use only - production deployment uses wsgi.py
 """
-# Simply import the WSGI application from wsgi.py for consistency
-# This ensures main.py and wsgi.py use exactly the same application object
-from wsgi import application as app
+# Direct import from app.py for development
+from app import app
 import os
 
 # This is only used when running this file directly for development
