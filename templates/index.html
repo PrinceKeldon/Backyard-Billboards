@@ -350,7 +350,7 @@
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <p class="mt-2">Generating your personalized recommendations...</p>
-                        <button type="button" id="cancelRecommendations" class="btn btn-sm btn-outline-secondary mt-2">Cancel</button>
+                        <button type="button" id="cancelRecommendationsBtn" class="btn btn-sm btn-outline-secondary mt-2">Cancel</button>
                     </div>
                     
                     <!-- Results container (initially hidden) -->
@@ -369,17 +369,11 @@
                     Error generating recommendations. Please try again.
                 </div>
                 
-                <div class="d-flex justify-content-center d-none" id="recommendationsLoading">
-                    <div class="spinner-border text-primary my-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
+                <!-- Second loading indicator removed to fix duplicate ID issue -->
                 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger d-none" id="cancelRecommendations">
-                        <i class="fas fa-times me-1"></i> Cancel
-                    </button>
+                    <!-- Cancel button removed - already added in the loading indicator -->
                     <button type="submit" class="btn btn-primary" id="getRecommendationsBtn">
                         <i class="fas fa-magic me-1"></i> Get Recommendations
                     </button>

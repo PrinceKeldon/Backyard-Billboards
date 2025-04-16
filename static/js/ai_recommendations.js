@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       // Set up cancel button functionality
-      const cancelButton = document.getElementById('cancelRecommendations');
+      const cancelButton = document.getElementById('cancelRecommendationsBtn');
       if (cancelButton) {
         cancelButton.onclick = function() {
           if (abortController) {
