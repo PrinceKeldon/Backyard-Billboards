@@ -1,52 +1,43 @@
+
 """
 Gunicorn configuration file for Backyard Billboards application
-Used in both development and production environments
 """
 import os
 import multiprocessing
 
-# Bind to all network interfaces on the specified port
-# Use Replit-specific $PORT if available, otherwise default to 5000
-port = os.environ.get("PORT", "5000")
-bind = f"0.0.0.0:{port}"
+# Always bind to port 5000 to match port forwarding configuration
+bind = "0.0.0.0:5000"
 
-# Set workers based on available CPU cores - optimal for Replit
+# Set workers based on CPU cores
 workers = multiprocessing.cpu_count() * 2 + 1
-workers = min(workers, 4)  # Cap at 4 workers maximum for Replit
+workers = min(workers, 4)  # Cap at 4 workers for Replit
 
-# Application module - this is the entry point
-wsgi_app = "wsgi:application" 
+# Configure timeouts
+timeout = 300
+keepalive = 60
 
-# Configure timeouts (in seconds) - increased for better reliability
-timeout = 300  # 5 minutes
-keepalive = 60  # 1 minute
-
-# Reuse port (helps with socket issues during restarts)
+# Enable port reuse
 reuse_port = True
 
-# Use synchronous workers - reliable for Flask
+# Use synchronous workers
 worker_class = "sync"
 
-# Set maximum number of simultaneous requests per worker
+# Worker connections
 worker_connections = 1000
 
-# Maximum requests before worker restart to prevent memory leaks
+# Restart workers periodically
 max_requests = 1000
 max_requests_jitter = 50
 
-# Logging configuration
-accesslog = "-"  # Log to stdout
-errorlog = "-"   # Log to stderr
+# Logging
+accesslog = "-"
+errorlog = "-"
 loglevel = "info"
 
-# Enable auto-reload in development mode
+# Development mode auto-reload
 reload = bool(os.environ.get("GUNICORN_RELOAD", False))
 
-# Don't daemonize - important for containerized environments like Replit
+# Process management
 daemon = False
-
-# Simplify application startup
 preload_app = False
-
-# Graceful shutdown timeout - increased to match main timeout
 graceful_timeout = 300
