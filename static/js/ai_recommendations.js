@@ -66,8 +66,12 @@ document.addEventListener('DOMContentLoaded', function() {
         };
       }
       
-      // Get URL for the request
-      const url = aiRecommendationForm.getAttribute('action');
+      // Get URL for the request - use the form's action or fallback to hard-coded URL
+      let url = aiRecommendationForm.getAttribute('action');
+      if (!url) {
+        url = '/ai_recommendation';
+        console.warn('Form is missing action attribute, using fallback URL');
+      }
       
       // Collect form data
       const formData = new FormData(aiRecommendationForm);
