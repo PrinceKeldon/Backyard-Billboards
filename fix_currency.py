@@ -105,7 +105,7 @@ def clear_app_cache():
         try:
             os.system("pkill -f gunicorn")
             time.sleep(2)
-            os.system("gunicorn --bind 0.0.0.0:5000 --reuse-port wsgi:app &")
+            os.system("gunicorn --bind 0.0.0.0:5000 --reuse-port wsgi:application &")
             logger.info("Application restarted to clear cache")
         except Exception as e:
             logger.error(f"Error restarting app: {str(e)}")

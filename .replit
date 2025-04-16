@@ -8,7 +8,7 @@ deploymentTarget = "gce"
 run = "gunicorn --config gunicorn_config.py wsgi:application"
 
 [workflows]
-runButton = "Project"
+runButton = "Start Development Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -33,6 +33,15 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start Development Server"
+author = 41273479
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload wsgi:application"
 
 [[ports]]
 localPort = 5000
