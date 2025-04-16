@@ -430,6 +430,25 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+/* Hot Now button pulse animation */
+.pulse-button {
+    position: relative;
+    animation: pulse-animation 2s infinite;
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+}
+
+@keyframes pulse-animation {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
 /* Deal detail page styling */
 .deal-image-container {
     position: relative;

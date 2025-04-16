@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 class DealDB:
     """Database class for managing happy hour deals and users"""
     
-    def add_user(self, username, email, password_hash):
+    def _safe_key(self, key):
+        """Make a key safe for storage by removing problematic characters"""
+        return key.replace(':', '_').replace('/', '_').replace(' ', '_')
+        
+    def add_user(self, username, email, password_hash, is_admin=False):
         """Add a new user"""
         try:
             # Check if username or email already exists
@@ -19,12 +23,27 @@ class DealDB:
             self.db[username] = {
                 "password_hash": password_hash,
                 "username": username,
-                "email": email
+                "email": email,
+                "is_admin": is_admin
             }
             return True
         except Exception as e:
             logger.error(f"Error adding user: {str(e)}")
             raise
+            
+    def make_user_admin(self, username):
+        """Make a user an admin"""
+        try:
+            if username in self.db:
+                user_data = self.db[username]
+                user_data['is_admin'] = True
+                self.db[username] = user_data
+                logger.info(f"Made user {username} an admin")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error making user admin: {str(e)}")
+            return False
 
     def get_user(self, username):
         """Get user data"""
@@ -287,6 +306,186 @@ class DealDB:
             logger.error(f"Error getting hidden gems: {str(e)}")
             raise
     
+    def add_event(self, event_name, club_name, location, district=None, 
+               image_url=None, start_time=None, end_time=None, description=None, 
+               submitted_by=None):
+        """
+        Add a club event with 48-hour validity
+        
+        Args:
+            event_name (str): Name of the event
+            club_name (str): Name of the club
+            location (str): Location of the club
+            district (str, optional): District/neighborhood
+            image_url (str, optional): URL to event image
+            start_time (str, optional): Event start time
+            end_time (str, optional): Event end time
+            description (str, optional): Event description
+            submitted_by (str, optional): Username of submitter
+            
+        Returns:
+            dict: The added event data
+        """
+        try:
+            # Generate a timestamp for when the event was added
+            now = datetime.datetime.now()
+            created_at = now.strftime("%Y-%m-%d %H:%M:%S.%f")
+            
+            # Calculate expiration time (48 hours from now)
+            expiration_time = (now + datetime.timedelta(hours=48)).strftime("%Y-%m-%d %H:%M:%S.%f")
+            
+            # Create the event data
+            event_data = {
+                "event_name": event_name,
+                "club_name": club_name,
+                "location": location,
+                "district": district,
+                "image_url": image_url,
+                "start_time": start_time,
+                "end_time": end_time,
+                "description": description,
+                "submitted_by": submitted_by,
+                "created_at": created_at,
+                "expires_at": expiration_time,
+                "is_active": True
+            }
+            
+            # Store in the database with the event name as the key
+            safe_key = self._safe_key(f"event:{event_name}")
+            self.db[safe_key] = event_data
+            
+            logger.info(f"Added event: {event_name} at {club_name}")
+            return event_data
+        
+        except Exception as e:
+            logger.error(f"Error adding event: {str(e)}")
+            raise
+            
+    def get_active_events(self, limit=None):
+        """
+        Get all active events (not expired)
+        
+        Args:
+            limit (int, optional): Maximum number of events to return
+            
+        Returns:
+            list: List of active events
+        """
+        try:
+            now = datetime.datetime.now()
+            now_str = now.strftime("%Y-%m-%d %H:%M:%S.%f")
+            
+            events = []
+            
+            # Iterate through all keys
+            for key in list(self.db.keys()):
+                # Check if this is an event
+                if key.startswith("event:"):
+                    try:
+                        event_data = self.db[key]
+                        
+                        # Include the event name in the data
+                        event_name_from_key = key.replace("event:", "")
+                        event_data["event_name"] = event_name_from_key
+                        
+                        # Check if the event has expired
+                        if "expires_at" in event_data:
+                            expires_at = event_data["expires_at"]
+                            
+                            # If not expired, add to the list
+                            if expires_at > now_str:
+                                events.append(event_data)
+                            else:
+                                # Mark as inactive if expired
+                                event_data["is_active"] = False
+                                self.db[key] = event_data
+                                logger.info(f"Marked event as inactive (expired): {event_name_from_key}")
+                    except Exception as e:
+                        logger.error(f"Error processing event key {key}: {str(e)}")
+            
+            # Sort events by creation time (newest first)
+            events = sorted(events, key=lambda x: x.get("created_at", ""), reverse=True)
+            
+            # Apply limit if provided
+            if limit:
+                events = events[:limit]
+                
+            logger.debug(f"Returning {len(events)} active events")
+            return events
+        
+        except Exception as e:
+            logger.error(f"Error getting active events: {str(e)}")
+            raise
+            
+    def delete_expired_events(self):
+        """
+        Delete all expired events from the database
+        
+        Returns:
+            int: Number of deleted events
+        """
+        try:
+            now = datetime.datetime.now()
+            now_str = now.strftime("%Y-%m-%d %H:%M:%S.%f")
+            
+            deleted_count = 0
+            
+            # Iterate through all keys
+            for key in list(self.db.keys()):
+                # Check if this is an event
+                if key.startswith("event:"):
+                    try:
+                        event_data = self.db[key]
+                        
+                        # Check if the event has expired
+                        if "expires_at" in event_data:
+                            expires_at = event_data["expires_at"]
+                            
+                            # Delete if expired
+                            if expires_at <= now_str:
+                                del self.db[key]
+                                deleted_count += 1
+                                logger.info(f"Deleted expired event: {key}")
+                    except Exception as e:
+                        logger.error(f"Error processing event key {key}: {str(e)}")
+    
+            logger.info(f"Deleted {deleted_count} expired events")
+            return deleted_count
+        
+        except Exception as e:
+            logger.error(f"Error deleting expired events: {str(e)}")
+            raise
+    
+    def delete_event(self, event_key):
+        """
+        Delete an event from the database
+        
+        Args:
+            event_key (str): Key of the event to delete
+            
+        Returns:
+            bool: Whether the deletion was successful
+        """
+        try:
+            # Apply safe key function if not already applied
+            safe_key = event_key
+            if not safe_key.startswith("event:"):
+                safe_key = self._safe_key(event_key)
+            
+            logger.debug(f"Attempting to delete event with key: {safe_key}, original key: {event_key}")
+            logger.debug(f"Available keys: {list(self.db.keys())[:10]}")  # Only show first 10 keys to avoid overflow
+                
+            if safe_key in self.db:
+                del self.db[safe_key]
+                logger.info(f"Deleted event: {event_key}")
+                return True
+            else:
+                logger.warning(f"Event not found with key: {safe_key}")
+                return False
+        except Exception as e:
+            logger.error(f"Error deleting event: {str(e)}")
+            return False
+            
     def get_late_night_deals(self, limit=None):
         """
         Get deals that are available after 10 PM (afterparty deals)

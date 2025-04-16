@@ -127,6 +127,177 @@ def rate_limit():
         time.sleep(MIN_REQUEST_INTERVAL - (current_time - last_request_time))
     last_request_time = time.time()
 
+@app.route("/hot-now")
+def hot_now():
+    """Route to display current club events (Hot Now)"""
+    try:
+        # Clean up expired events first
+        deal_db.delete_expired_events()
+        
+        # Get active events
+        events = deal_db.get_active_events()
+        
+        # Get district filter from request args
+        district_filter = request.args.get('district', '')
+        
+        # Filter events by district if specified
+        if district_filter:
+            events = [
+                event for event in events 
+                if event.get('district') and event.get('district').lower() == district_filter.lower()
+            ]
+        
+        # Get all districts for filtering
+        all_districts = sorted(list(set(event.get('district') for event in events if event.get('district'))))
+        
+        # Get count of hidden gems for the navigation badge
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+        
+        # Prepare the template context
+        context = {
+            'events': events,
+            'districts': all_districts,
+            'hidden_gems_count': hidden_gems_count,
+            'current_district': district_filter
+        }
+        
+        return render_template('hot_now.html', **context)
+    except Exception as e:
+        logger.error(f"Error displaying hot now events: {str(e)}")
+        flash(f"Error displaying events: {str(e)}", "danger")
+        return render_template('error.html', error=str(e)), 500
+
+@app.route("/admin/events", methods=["GET", "POST"])
+@login_required
+def admin_events():
+    """Admin route for managing club events"""
+    # Check if user is admin
+    if not current_user.is_admin:
+        flash("You don't have permission to access this page", "danger")
+        return redirect(url_for("home"))
+    
+    if request.method == "POST":
+        try:
+            # Get form data
+            event_name = request.form.get("event_name")
+            club_name = request.form.get("club_name")
+            location = request.form.get("location")
+            district = request.form.get("district")
+            description = request.form.get("description")
+            start_time = request.form.get("start_time")
+            end_time = request.form.get("end_time")
+            image_url = request.form.get("image_url")
+            
+            # Validate required fields
+            if not event_name or not club_name or not location:
+                flash("Event name, club name, and location are required", "danger")
+                return redirect(url_for("admin_events"))
+            
+            # Add the event to the database
+            deal_db.add_event(
+                event_name=event_name,
+                club_name=club_name,
+                location=location,
+                district=district,
+                image_url=image_url,
+                start_time=start_time,
+                end_time=end_time,
+                description=description,
+                submitted_by=current_user.username
+            )
+            
+            flash("Event added successfully!", "success")
+            return redirect(url_for("hot_now"))
+        
+        except Exception as e:
+            logger.error(f"Error adding event: {str(e)}")
+            flash(f"Error adding event: {str(e)}", "danger")
+            return redirect(url_for("admin_events"))
+    
+    # GET request - show the form
+    # Get all Berlin districts for the dropdown
+    berlin_districts = [
+        "Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg", 
+        "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten",
+        "Lichtenberg", "Köpenick", "Spandau", "Steglitz", "Marzahn", "Wilmersdorf",
+        "Tempelhof", "Treptow", "Pankow", "Reinickendorf", "Zehlendorf"
+    ]
+    berlin_districts.sort()
+    
+    # Get all active events
+    events = deal_db.get_active_events()
+    
+    # Get count of hidden gems for the navigation badge
+    hidden_gems_count = len(deal_db.get_hidden_gems())
+    
+    return render_template(
+        "admin_events.html", 
+        districts=berlin_districts, 
+        events=events,
+        hidden_gems_count=hidden_gems_count
+    )
+
+@app.route("/admin/make-admin", methods=["POST"])
+@login_required
+def make_admin():
+    """Route to make a user an admin (only accessible by existing admins)"""
+    # Check if user is admin
+    if not current_user.is_admin:
+        flash("You don't have permission to access this feature", "danger")
+        return redirect(url_for("home"))
+    
+    try:
+        username = request.form.get("username")
+        
+        if not username:
+            flash("Username is required", "danger")
+            return redirect(url_for("admin_events"))
+        
+        # Make the user an admin
+        if deal_db.make_user_admin(username):
+            flash(f"{username} is now an admin", "success")
+        else:
+            flash(f"User {username} not found", "warning")
+        
+        return redirect(url_for("admin_events"))
+    
+    except Exception as e:
+        logger.error(f"Error making user admin: {str(e)}")
+        flash(f"Error making user admin: {str(e)}", "danger")
+        return redirect(url_for("admin_events"))
+
+@app.route("/admin/delete-event", methods=["POST"])
+@login_required
+def delete_event():
+    """Route to delete an event (only accessible by admins)"""
+    # Check if user is admin
+    if not current_user.is_admin:
+        flash("You don't have permission to access this feature", "danger")
+        return redirect(url_for("home"))
+    
+    try:
+        event_name = request.form.get("event_name")
+        
+        if not event_name:
+            flash("Event name is required", "danger")
+            return redirect(url_for("admin_events"))
+        
+        # Delete the event - prefix with "event:" for database key format
+        event_key = f"event:{event_name}"
+        
+        logger.debug(f"Attempting to delete event with key: {event_key}")
+        if deal_db.delete_event(event_key):
+            flash(f"Event '{event_name}' deleted successfully", "success")
+        else:
+            flash(f"Event '{event_name}' not found", "warning")
+        
+        return redirect(url_for("admin_events"))
+    
+    except Exception as e:
+        logger.error(f"Error deleting event: {str(e)}")
+        flash(f"Error deleting event: {str(e)}", "danger")
+        return redirect(url_for("admin_events"))
+
 @app.route("/")
 def home():
     """Home page route - displays all deals with filtering options"""
