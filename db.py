@@ -1,6 +1,5 @@
 import replit
 from datetime import datetime
-import datetime as dt
 import logging
 
 logger = logging.getLogger(__name__)
@@ -8,19 +7,8 @@ logger = logging.getLogger(__name__)
 class DealDB:
     """Database class for managing happy hour deals and users"""
     
-    def add_user(self, username, email, password_hash, is_admin=False):
-        """
-        Add a new user
-        
-        Args:
-            username (str): Username
-            email (str): Email address
-            password_hash (str): Hashed password
-            is_admin (bool, optional): Whether the user is an admin (default: False)
-            
-        Returns:
-            bool: True if user created successfully, False otherwise
-        """
+    def add_user(self, username, email, password_hash):
+        """Add a new user"""
         try:
             # Check if username or email already exists
             for user_data in self.db.values():
@@ -31,10 +19,8 @@ class DealDB:
             self.db[username] = {
                 "password_hash": password_hash,
                 "username": username,
-                "email": email,
-                "is_admin": is_admin
+                "email": email
             }
-            logger.info(f"Added user: {username} (admin: {is_admin})")
             return True
         except Exception as e:
             logger.error(f"Error adding user: {str(e)}")
@@ -367,179 +353,3 @@ class DealDB:
         except Exception as e:
             logger.error(f"Error getting late night deals: {str(e)}")
             raise
-    
-    # -------------------- Event Billboard Functions --------------------
-    
-    def add_event(self, event_name, venue, district, event_date, event_time, description, image_url=None, event_url=None, **kwargs):
-        """
-        Add a club event to the billboard
-        
-        Args:
-            event_name (str): Name of the event
-            venue (str): Name of the venue/club
-            district (str): Berlin district
-            event_date (str): Date of the event (YYYY-MM-DD)
-            event_time (str): Time of the event (HH:MM)
-            description (str): Description of the event
-            image_url (str, optional): URL to event image
-            event_url (str, optional): URL to event page
-            **kwargs: Additional event properties
-        
-        Returns:
-            dict: The added event data
-        """
-        try:
-            # Create a unique key for the event
-            sanitized_name = event_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
-            event_id = f"{sanitized_name}_{event_date}_{venue}"
-            
-            # Set event data with all properties
-            event_data = {
-                'event_name': event_name,
-                'venue': venue,
-                'district': district,
-                'event_date': event_date,
-                'event_time': event_time,
-                'description': description,
-                'image_url': image_url,
-                'event_url': event_url,
-                'added_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-                **kwargs
-            }
-            
-            # Store the event
-            self.db[event_id] = event_data
-            logger.info(f"Added event: {event_name} at {venue} on {event_date}")
-            
-            # Add the event_id to the event data for reference
-            event_data['event_id'] = event_id
-            return event_data
-        
-        except Exception as e:
-            logger.error(f"Error adding event: {str(e)}")
-            raise
-    
-    def get_event(self, event_id):
-        """
-        Get a specific event by ID
-        
-        Args:
-            event_id (str): ID of the event
-            
-        Returns:
-            dict: Event data or None if not found
-        """
-        try:
-            event_data = self.db.get(event_id)
-            if event_data:
-                # Add the event_id to the event data for reference
-                event_data['event_id'] = event_id
-            return event_data
-        except Exception as e:
-            logger.error(f"Error getting event {event_id}: {str(e)}")
-            return None
-    
-    def get_current_events(self, hours_window=48):
-        """
-        Get events happening within the specified time window
-        
-        Args:
-            hours_window (int): Time window in hours from now (default: 48 hours)
-            
-        Returns:
-            list: List of current events sorted by date/time
-        """
-        try:
-            all_events = []
-            current_time = datetime.datetime.now()
-            end_time = current_time + datetime.timedelta(hours=hours_window)
-            
-            # Get all keys that start with event prefix
-            for key in self.db.prefix(""):
-                if "_" in key:  # Check if it's potentially an event key
-                    event_data = self.db.get(key)
-                    
-                    # Skip if not an event or missing required fields
-                    if not event_data or 'event_date' not in event_data or 'event_time' not in event_data:
-                        continue
-                    
-                    try:
-                        # Parse event datetime
-                        event_datetime_str = f"{event_data['event_date']} {event_data['event_time']}"
-                        event_datetime = datetime.datetime.strptime(event_datetime_str, "%Y-%m-%d %H:%M")
-                        
-                        # Check if event is within the window
-                        if current_time <= event_datetime <= end_time:
-                            # Add the event_id to the event data for reference
-                            event_data['event_id'] = key
-                            all_events.append(event_data)
-                    except ValueError:
-                        logger.warning(f"Invalid date/time format for event {key}: {event_datetime_str}")
-            
-            # Sort events by date and time
-            sorted_events = sorted(all_events, key=lambda x: f"{x['event_date']} {x['event_time']}")
-            
-            logger.debug(f"Returning {len(sorted_events)} current events")
-            return sorted_events
-        
-        except Exception as e:
-            logger.error(f"Error getting current events: {str(e)}")
-            return []
-    
-    def delete_event(self, event_id):
-        """
-        Delete an event from the billboard
-        
-        Args:
-            event_id (str): ID of the event to delete
-        """
-        try:
-            if self.db.get(event_id):
-                del self.db[event_id]
-                logger.info(f"Deleted event: {event_id}")
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Error deleting event {event_id}: {str(e)}")
-            return False
-    
-    def clean_expired_events(self):
-        """
-        Clean up expired events from the database
-        
-        Returns:
-            int: Number of events cleaned up
-        """
-        try:
-            current_time = datetime.datetime.now()
-            cleaned_count = 0
-            
-            # Get all keys that start with event prefix
-            for key in self.db.prefix(""):
-                if "_" in key:  # Check if it's potentially an event key
-                    event_data = self.db.get(key)
-                    
-                    # Skip if not an event or missing required fields
-                    if not event_data or 'event_date' not in event_data or 'event_time' not in event_data:
-                        continue
-                    
-                    try:
-                        # Parse event datetime
-                        event_datetime_str = f"{event_data['event_date']} {event_data['event_time']}"
-                        event_datetime = datetime.datetime.strptime(event_datetime_str, "%Y-%m-%d %H:%M")
-                        
-                        # Check if event is in the past
-                        if event_datetime < current_time:
-                            # Delete the event
-                            del self.db[key]
-                            cleaned_count += 1
-                            logger.info(f"Cleaned up expired event: {key}")
-                    except ValueError:
-                        logger.warning(f"Invalid date/time format for event {key}: {event_datetime_str}")
-            
-            logger.info(f"Cleaned up {cleaned_count} expired events")
-            return cleaned_count
-        
-        except Exception as e:
-            logger.error(f"Error cleaning expired events: {str(e)}")
-            return 0

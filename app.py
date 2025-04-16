@@ -9,7 +9,6 @@ import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from werkzeug.utils import secure_filename
 from models import User
 from db import DealDB
 from scraper import YelpScraper
@@ -321,149 +320,6 @@ def hidden_gems():
         logger.error(f"Error displaying hidden gems: {str(e)}")
         flash(f"Error displaying hidden gems: {str(e)}", "danger")
         return render_template('error.html', error=str(e)), 500
-        
-@app.route("/hot-now")
-def hot_now():
-    """Route to display current club events in Berlin (Hot Now Billboard)"""
-    try:
-        # Get filter parameters
-        district = request.args.get('district', '')
-        
-        # Get events within 48-hour window
-        events = deal_db.get_current_events(hours_window=48)
-        
-        # Filter by district if specified
-        if district:
-            events = [e for e in events if e.get('district') and e.get('district').lower() == district.lower()]
-        
-        # Get all unique districts for filtering
-        all_districts = sorted(list(set(event.get('district') for event in events if event.get('district'))))
-        
-        # Get Berlin districts from event scraper for the dropdown
-        from event_scraper import EventScraper
-        districts = EventScraper.BERLIN_DISTRICTS
-        
-        # Get count of hidden gems for the navigation badge
-        hidden_gems_count = len(deal_db.get_hidden_gems())
-        
-        return render_template(
-            'hot_now.html',
-            events=events,
-            districts=districts,
-            current_district=district,
-            hidden_gems_count=hidden_gems_count
-        )
-    except Exception as e:
-        logger.error(f"Error displaying events: {str(e)}")
-        flash(f"Error displaying events: {str(e)}", "danger")
-        return render_template('error.html', error=str(e)), 500
-
-@app.route("/scrape-events", methods=["POST"])
-@login_required
-def scrape_events():
-    """Route to trigger scraping of events (admin only)"""
-    try:
-        # Check if user is admin
-        if not current_user.is_admin:
-            flash("You don't have permission to perform this action.", "danger")
-            return redirect(url_for('hot_now'))
-        
-        rate_limit()
-        
-        # Import event scraper
-        from event_scraper import EventScraper
-        
-        # Create scraper and scrape events
-        scraper = EventScraper()
-        events = scraper.scrape_berlin_events(limit=15)
-        
-        # Add each event to the database
-        events_added = 0
-        for event in events:
-            try:
-                # Add to database
-                deal_db.add_event(
-                    event_name=event['event_name'],
-                    venue=event['venue'],
-                    district=event['district'],
-                    event_date=event['event_date'],
-                    event_time=event['event_time'],
-                    description=event['description'],
-                    image_url=event.get('image_url'),
-                    event_url=event.get('event_url')
-                )
-                events_added += 1
-            except Exception as event_error:
-                logger.error(f"Error adding event {event.get('event_name')}: {str(event_error)}")
-                continue
-        
-        # Clean up expired events
-        cleaned_count = deal_db.clean_expired_events()
-        
-        flash(f"Successfully scraped {events_added} events! Cleaned up {cleaned_count} expired events.", "success")
-    except Exception as e:
-        logger.error(f"Error scraping events: {str(e)}")
-        flash(f"Error scraping events: {str(e)}", "danger")
-    
-    return redirect(url_for("hot_now"))
-
-@app.route("/add-event", methods=["GET", "POST"])
-@login_required
-def add_event():
-    """Route for manually adding events (admin only)"""
-    # Check if user is admin
-    if not current_user.is_admin:
-        flash("You don't have permission to access this page.", "danger")
-        return redirect(url_for('hot_now'))
-    
-    # Get Berlin districts from event scraper for the dropdown
-    from event_scraper import EventScraper
-    districts = EventScraper.BERLIN_DISTRICTS
-    
-    if request.method == "POST":
-        try:
-            # Get form data
-            event_name = request.form.get('event_name')
-            venue = request.form.get('venue')
-            district = request.form.get('district')
-            event_date = request.form.get('event_date')
-            event_time = request.form.get('event_time')
-            description = request.form.get('description', '')
-            event_url = request.form.get('event_url', '')
-            
-            # Process image if uploaded
-            image_url = None
-            if 'event_image' in request.files:
-                file = request.files['event_image']
-                if file and file.filename:
-                    filename = secure_filename(file.filename)
-                    # Create uploads directory if it doesn't exist
-                    os.makedirs('static/uploads/events', exist_ok=True)
-                    filepath = os.path.join('static/uploads/events', filename)
-                    file.save(filepath)
-                    image_url = url_for('static', filename=f'uploads/events/{filename}', _external=True)
-            
-            # Add event to database
-            deal_db.add_event(
-                event_name=event_name,
-                venue=venue,
-                district=district,
-                event_date=event_date,
-                event_time=event_time,
-                description=description,
-                image_url=image_url,
-                event_url=event_url,
-                added_by=current_user.username,
-                is_manually_added=True
-            )
-            
-            flash(f"Event '{event_name}' added successfully!", "success")
-            return redirect(url_for('hot_now'))
-        except Exception as e:
-            logger.error(f"Error adding event: {str(e)}")
-            flash(f"Error adding event: {str(e)}", "danger")
-    
-    return render_template('add_event.html', districts=districts)
         
 @app.route("/scrape", methods=["POST"])
 def scrape_deals():
@@ -884,6 +740,179 @@ def remove_austin_texas():
 
 # Note: We've already defined page_not_found handler earlier
 
+@app.route("/submit-hidden-gem", methods=["GET", "POST"])
+@login_required
+def submit_hidden_gem():
+    """Route for submitting hidden gems (requires login)"""
+    if request.method == "POST":
+        try:
+            business_name = request.form.get("business_name")
+            deal = request.form.get("deal", "")  # Deal is optional for hidden gems
+            location = request.form.get("location")
+            district = request.form.get("district")
+            recommendation = request.form.get("recommendation")
+            place_type = request.form.get("place_type", "")
+            price_level = request.form.get("price_level", "")
+            
+            # Validate required fields
+            if not business_name or not location or not recommendation:
+                flash("Business name, location, and recommendation description are required", "danger")
+                return redirect(url_for("submit_hidden_gem"))
+            
+            # Set hidden gem properties
+            kwargs = {
+                "district": district,
+                "has_accurate_location": True,
+                "is_hidden_gem": True,
+                "hidden_gem_description": recommendation,
+                "place_type": place_type,
+                "price_level": price_level if price_level else None,
+                "submitted_by": current_user.username  # Use the logged-in username
+            }
+            
+            # Add to database
+            deal_db.add_deal(
+                business_name, 
+                deal, 
+                location, 
+                **kwargs
+            )
+            
+            flash("Hidden gem submitted successfully! Thank you for your contribution.", "success")
+            return redirect(url_for("hidden_gems"))
+        
+        except Exception as e:
+            logger.error(f"Error submitting hidden gem: {str(e)}")
+            flash(f"Error submitting hidden gem: {str(e)}", "danger")
+            return redirect(url_for("submit_hidden_gem"))
+    
+    # GET request - show the form
+    # Get all Berlin districts for the dropdown
+    berlin_districts = [
+        "Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg", 
+        "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten",
+        "Lichtenberg", "Köpenick", "Spandau", "Steglitz", "Marzahn", "Wilmersdorf",
+        "Tempelhof", "Treptow", "Pankow", "Reinickendorf", "Zehlendorf"
+    ]
+    berlin_districts.sort()
+    
+    # Get existing districts from database to append to the list
+    try:
+        deals = deal_db.get_all_deals()
+        existing_districts = set(d.get('district') for d in deals if d.get('district'))
+        # Add any missing districts to the list
+        for district in existing_districts:
+            if district and district not in berlin_districts:
+                berlin_districts.append(district)
+        berlin_districts.sort()
+    except Exception as e:
+        logger.error(f"Error retrieving districts: {str(e)}")
+    
+    # Get count of hidden gems for the navigation badge
+    try:
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+    except:
+        hidden_gems_count = 0
+        
+    return render_template(
+        "submit_hidden_gem.html", 
+        districts=berlin_districts, 
+        hidden_gems_count=hidden_gems_count
+    )
+
+@app.route("/deal/<business_name>")
+def view_deal(business_name):
+    """Route to view a specific deal - with detailed information and custom image generation"""
+    try:
+        # Decode the business name (it will be URL-encoded)
+        decoded_name = urllib.parse.unquote_plus(business_name)
+        
+        # Get the deal data
+        deal_data = deal_db.get_deal(decoded_name)
+        
+        if not deal_data:
+            flash("Deal not found", "danger")
+            return redirect(url_for("home"))
+        
+        # Initialize variables for additional venue details
+        venue_description = None
+        venue_image = None
+        venue_hours = None
+        similar_deals = []
+        
+        # Generate AI description of the venue
+        try:
+            venue_description = get_venue_description(
+                decoded_name,
+                deal_data.get('deal', ''),
+                deal_data.get('district', ''),
+                deal_data.get('place_type', '')
+            )
+        except Exception as e:
+            logger.error(f"Error generating AI venue description: {str(e)}")
+            # Fall back to a simple description if AI fails
+            if deal_data.get('place_type'):
+                venue_description = f"A {deal_data.get('place_type')} with special happy hour offers. Located in {deal_data.get('district', 'Berlin')}."
+        
+        # Look for similar deals (strictly showing only same district)
+        try:
+            all_deals = deal_db.get_all_deals()
+            
+            # Clean the dataset - filter out non-Berlin locations
+            berlin_deals = []
+            for deal in all_deals:
+                location = deal.get('location', '').lower()
+                if 'berlin' in location or deal.get('district'):
+                    berlin_deals.append(deal)
+                    
+            # Find deals in the same district - ONLY show deals from the same district
+            similar_deals = []
+            if deal_data.get('district'):
+                district_deals = [d for d in berlin_deals if 
+                                 d.get('district') == deal_data.get('district') and 
+                                 d.get('business_name') != decoded_name]
+                
+                # Get up to 4 similar deals from the same district only
+                similar_deals = district_deals[:4]
+            
+            # We no longer show random deals from other districts
+            # If there are no other deals in this district, the section won't show
+        except Exception as e:
+            logger.error(f"Error getting similar deals: {str(e)}")
+            
+        # Generate a venue image if not already available
+        if not venue_image:
+            try:
+                # Generate an image for the venue using the deal information
+                venue_image_bytes = generate_venue_image(
+                    decoded_name,
+                    deal_data.get('deal', 'Happy Hour Deal'),
+                    deal_data.get('location', 'Berlin'),
+                    deal_data.get('district'),
+                    deal_data.get('rating')
+                )
+                
+                if venue_image_bytes:
+                    # Convert to base64 for embedding in HTML
+                    venue_image = base64.b64encode(venue_image_bytes).decode('utf-8')
+            except Exception as e:
+                logger.error(f"Error generating venue image: {str(e)}")
+        
+        # Return the deal detail template with all the gathered information
+        return render_template(
+            "deal_detail.html", 
+            deal=deal_data,
+            venue_description=venue_description,
+            venue_image=venue_image,
+            venue_hours=venue_hours,
+            similar_deals=similar_deals
+        )
+    except Exception as e:
+        logger.error(f"Error viewing deal: {str(e)}")
+        flash(f"Error viewing deal: {str(e)}", "danger")
+        return redirect(url_for("home"))
+
+@app.errorhandler(500)
 def internal_server_error(e):
     """Handle 500 errors"""
     return render_template("index.html", deals=[], error="Internal server error"), 500

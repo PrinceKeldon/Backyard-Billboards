@@ -185,12 +185,6 @@
                             {% endif %}
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/hot-now' %}active{% endif %}" href="{{ url_for('hot_now') }}">
-                            <i class="fas fa-fire me-1"></i> Hot Now
-                            <span class="badge bg-danger text-white">New</span>
-                        </a>
-                    </li>
                     <!-- Authentication links -->
                     {% if current_user.is_authenticated %}
                     <li class="nav-item dropdown">
@@ -199,18 +193,6 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="{{ url_for('submit_hidden_gem') }}"><i class="fas fa-star me-1"></i> Submit Hidden Gem</a></li>
-                            {% if current_user.is_admin %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><span class="dropdown-header"><i class="fas fa-shield-alt me-1"></i> Admin Controls</span></li>
-                            <li><a class="dropdown-item" href="{{ url_for('add_event') }}"><i class="fas fa-calendar-plus me-1"></i> Add Event</a></li>
-                            <li>
-                                <form method="post" action="{{ url_for('scrape_events') }}" class="d-inline px-2">
-                                    <button type="submit" class="dropdown-item">
-                                        <i class="fas fa-sync me-1"></i> Scrape Events
-                                    </button>
-                                </form>
-                            </li>
-                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-1"></i> Log Out</a></li>
                         </ul>
