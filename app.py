@@ -777,6 +777,9 @@ def fix_currency_placeholders():
                     google_maps_url = deal.get('google_maps_url')
                     votes = deal.get('votes', 0)
                     scraped_at = deal.get('scraped_at')
+                    is_hidden_gem = deal.get('is_hidden_gem', False)
+                    hidden_gem_description = deal.get('hidden_gem_description', '')
+                    late_night_deal = deal.get('late_night_deal', False)
                     
                     # Create the updated deal text
                     updated_deal_text = deal_text.replace('{currency}', '€')
@@ -795,7 +798,10 @@ def fix_currency_placeholders():
                         price_level=price_level,
                         google_maps_url=google_maps_url,
                         votes=votes,
-                        scraped_at=scraped_at
+                        scraped_at=scraped_at,
+                        is_hidden_gem=is_hidden_gem,
+                        hidden_gem_description=hidden_gem_description,
+                        late_night_deal=late_night_deal
                     )
                     
                     fixed_count += 1
@@ -803,9 +809,10 @@ def fix_currency_placeholders():
                 except Exception as e:
                     logger.error(f"Error fixing currency for deal {business_name}: {str(e)}")
         
-        # Clear cache if any deals were fixed
+        # Clear only relevant cache keys if any deals were fixed
         if fixed_count > 0:
-            clear_cache()
+            # Since we're modifying deal text, clear all deal-related caches
+            clear_cache(['deals', 'late_night_deals', 'hidden_gems'])
         
         logger.info(f"Fixed {fixed_count} deals with currency placeholders")
         flash(f"Successfully fixed {fixed_count} deals with currency placeholders", "success")
@@ -857,9 +864,10 @@ def remove_austin_texas():
                 except Exception as e:
                     logger.error(f"Error deleting deal {business_name}: {str(e)}")
         
-        # Clear cache if any deals were deleted
+        # Clear only relevant cache keys if any deals were deleted
         if deleted_count > 0:
-            clear_cache()
+            # We're removing deals, so we need to update all deal-related caches
+            clear_cache(['deals', 'late_night_deals', 'hidden_gems', 'districts'])
             
         logger.info(f"Removed {deleted_count} Austin/American locations from the dataset")
         flash(f"Successfully removed {deleted_count} Austin/American locations", "success")
@@ -910,8 +918,8 @@ def submit_hidden_gem():
                 **kwargs
             )
             
-            # Clear cache after adding a hidden gem
-            clear_cache()
+            # Clear only relevant cache keys after adding a hidden gem
+            clear_cache(['hidden_gems', 'deals', 'districts'])
             
             flash("Hidden gem submitted successfully! Thank you for your contribution.", "success")
             return redirect(url_for("hidden_gems"))
