@@ -5,8 +5,12 @@ Gunicorn configuration file for Backyard Billboards application
 import os
 import multiprocessing
 
-# Always bind to port 5000 to match port forwarding configuration
-bind = "0.0.0.0:5000"
+# Use the PORT environment variable for deployment or default to 5000 for development
+port = int(os.environ.get("PORT", 5000))
+bind = f"0.0.0.0:{port}"
+
+# Specify the application
+wsgi_app = "wsgi:application"
 
 # Set workers based on CPU cores
 workers = multiprocessing.cpu_count() * 2 + 1
