@@ -37,6 +37,7 @@ cache = {
     'hidden_gems': [], 
     'late_night_deals': [],
     'districts': [],
+    'all_districts': [],  # This is used for consistent district dropdowns
     'last_updated': 0
 }
 
@@ -60,6 +61,7 @@ def clear_cache(keys=None):
             'hidden_gems': [],
             'late_night_deals': [], 
             'districts': [],
+            'all_districts': [],  # Make sure to include our new key
             'last_updated': 0
         }
         logger.debug("All application cache cleared")
@@ -269,10 +271,14 @@ def home():
                                  'am:' in d.get('deal', '').lower()]
         
         # Get all unique districts for the filter dropdown
-        districts = get_cached_data(
-            'districts',
-            lambda: sorted(list(set(d.get('district') for d in filtered_deals if d.get('district'))))
+        # We should get districts from all deals, not just filtered ones, so reset works properly
+        all_districts = get_cached_data(
+            'all_districts',
+            lambda: sorted(list(set(d.get('district') for d in deals if d.get('district'))))
         )
+        
+        # Use all_districts instead of districts to ensure all options are available even after filtering
+        districts = all_districts
         
         # First sort by district match (if district filter is active), then by date
         if district:
@@ -343,8 +349,11 @@ def late_night_deals():
         if district:
             deals = [d for d in deals if d.get('district') and d.get('district').lower() == district.lower()]
         
-        # Get all unique districts for filtering
-        all_districts = sorted(list(set(deal.get('district') for deal in deals if deal.get('district'))))
+        # Get all unique districts for filtering from all deals, not just late night deals
+        all_districts = get_cached_data(
+            'all_districts',
+            lambda: sorted(list(set(d.get('district') for d in deal_db.get_all_deals() if d.get('district'))))
+        )
         
         # Get count of hidden gems for the navigation badge (using cache)
         hidden_gems_count = len(get_cached_data('hidden_gems', deal_db.get_hidden_gems))
@@ -398,9 +407,10 @@ def hidden_gems():
         }
         
         # Get all unique districts for filtering
+        # We should get ALL districts from all deals for consistent dropdown options
         all_districts = get_cached_data(
-            'districts', 
-            lambda: sorted(list(set(gem.get('district') for gem in all_gems if gem.get('district'))))
+            'all_districts',
+            lambda: sorted(list(set(d.get('district') for d in deal_db.get_all_deals() if d.get('district'))))
         )
         
         # Construct pagination URL
