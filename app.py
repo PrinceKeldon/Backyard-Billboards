@@ -43,17 +43,42 @@ cache = {
 # Cache duration in seconds
 CACHE_DURATION = 300  # 5 minutes
 
-def clear_cache():
-    """Clear the application cache"""
+def clear_cache(keys=None):
+    """Clear the application cache, either completely or just specific keys
+    
+    Args:
+        keys (str or list, optional): If provided, only clear these specific cache keys.
+                                     Can be a string for a single key or a list for multiple keys.
+                                     Otherwise, clear the entire cache.
+    """
     global cache
-    cache = {
-        'deals': [],
-        'hidden_gems': [],
-        'late_night_deals': [], 
-        'districts': [],
-        'last_updated': 0
-    }
-    logger.debug("Application cache cleared")
+    
+    if keys is None:
+        # Reset the entire cache
+        cache = {
+            'deals': [],
+            'hidden_gems': [],
+            'late_night_deals': [], 
+            'districts': [],
+            'last_updated': 0
+        }
+        logger.debug("All application cache cleared")
+    else:
+        # Convert single key to list for consistent handling
+        if isinstance(keys, str):
+            keys = [keys]
+            
+        # Clear only the specified keys
+        for key in keys:
+            if key in cache:
+                # Keep the structure but clear the data
+                if key == 'last_updated':
+                    cache[key] = 0
+                else:
+                    cache[key] = []
+                logger.debug(f"Cache '{key}' cleared")
+            else:
+                logger.debug(f"Cache '{key}' not found, nothing to clear")
 
 def get_cached_data(key, fetch_func, *args, **kwargs):
     """Get data from cache if available and fresh, otherwise fetch and cache it
@@ -630,8 +655,9 @@ def upvote_deal():
             # Get the updated vote count
             vote_count = result.get('votes', 0)
             
-            # Clear cache after upvoting
-            clear_cache()
+            # Only clear relevant cache keys after upvoting
+            # 'deals' contains all deals including the one we just upvoted
+            clear_cache(['deals'])
             
             # If this was an AJAX request, return JSON
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -673,8 +699,9 @@ def clean_dataset():
         from scraper import YelpScraper
         cleaned_count = YelpScraper.clean_dataset()
         
-        # Clear cache after cleaning the dataset
-        clear_cache()
+        # Clear only relevant cache keys after cleaning the dataset
+        # Since we're updating locations, all deal-related caches should be cleared
+        clear_cache(['deals', 'late_night_deals'])
         
         flash(f"Successfully cleaned dataset! Updated {cleaned_count} deals to include Berlin in their location.", "success")
     except Exception as e:
@@ -707,9 +734,10 @@ def remove_dollar_prices():
                 except Exception as e:
                     logger.error(f"Error deleting deal {business_name}: {str(e)}")
         
-        # Clear cache after removing deals
+        # Clear only affected cache keys after removing deals
         if deleted_count > 0:
-            clear_cache()
+            # We're removing deals, so we need to update all deal-related caches
+            clear_cache(['deals', 'late_night_deals'])
             
         logger.info(f"Removed {deleted_count} deals with dollar prices")
         flash(f"Successfully removed {deleted_count} deals with dollar ($) prices", "success")
