@@ -5,5 +5,7 @@ This is the file that gunicorn uses as its entry point
 """
 from app import app
 
-# Expose the Flask app as 'application' for WSGI standard
+# Keep both names for compatibility
+# - 'app' is imported from app.py
+# - 'application' is used by some WSGI servers
 application = app
