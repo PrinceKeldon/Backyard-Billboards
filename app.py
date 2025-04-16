@@ -548,6 +548,10 @@ def submit_deal():
                 location, 
                 **kwargs
             )
+            
+            # Clear cache after adding a new deal
+            clear_cache()
+            
             flash("Deal submitted successfully!", "success")
             return redirect(url_for("home"))
         
@@ -596,6 +600,10 @@ def delete_deal():
             return jsonify({"status": "error", "message": "Business name is required"}), 400
         
         deal_db.delete_deal(business_name)
+        
+        # Clear cache after deleting a deal
+        clear_cache()
+        
         flash(f"Deal for {business_name} deleted successfully", "success")
         return redirect(url_for("home"))
     
@@ -621,6 +629,9 @@ def upvote_deal():
         if result:
             # Get the updated vote count
             vote_count = result.get('votes', 0)
+            
+            # Clear cache after upvoting
+            clear_cache()
             
             # If this was an AJAX request, return JSON
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -661,6 +672,10 @@ def clean_dataset():
     try:
         from scraper import YelpScraper
         cleaned_count = YelpScraper.clean_dataset()
+        
+        # Clear cache after cleaning the dataset
+        clear_cache()
+        
         flash(f"Successfully cleaned dataset! Updated {cleaned_count} deals to include Berlin in their location.", "success")
     except Exception as e:
         logger.error(f"Error cleaning dataset: {str(e)}")
@@ -692,6 +707,10 @@ def remove_dollar_prices():
                 except Exception as e:
                     logger.error(f"Error deleting deal {business_name}: {str(e)}")
         
+        # Clear cache after removing deals
+        if deleted_count > 0:
+            clear_cache()
+            
         logger.info(f"Removed {deleted_count} deals with dollar prices")
         flash(f"Successfully removed {deleted_count} deals with dollar ($) prices", "success")
         return redirect(url_for("home"))
@@ -756,6 +775,10 @@ def fix_currency_placeholders():
                 except Exception as e:
                     logger.error(f"Error fixing currency for deal {business_name}: {str(e)}")
         
+        # Clear cache if any deals were fixed
+        if fixed_count > 0:
+            clear_cache()
+        
         logger.info(f"Fixed {fixed_count} deals with currency placeholders")
         flash(f"Successfully fixed {fixed_count} deals with currency placeholders", "success")
         return redirect(url_for("home"))
@@ -806,6 +829,10 @@ def remove_austin_texas():
                 except Exception as e:
                     logger.error(f"Error deleting deal {business_name}: {str(e)}")
         
+        # Clear cache if any deals were deleted
+        if deleted_count > 0:
+            clear_cache()
+            
         logger.info(f"Removed {deleted_count} Austin/American locations from the dataset")
         flash(f"Successfully removed {deleted_count} Austin/American locations", "success")
         return redirect(url_for("home"))
@@ -854,6 +881,9 @@ def submit_hidden_gem():
                 location, 
                 **kwargs
             )
+            
+            # Clear cache after adding a hidden gem
+            clear_cache()
             
             flash("Hidden gem submitted successfully! Thank you for your contribution.", "success")
             return redirect(url_for("hidden_gems"))
