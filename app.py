@@ -1194,8 +1194,8 @@ def generate_deal_thumbnail(business_name, deal_text, district=None):
             circle_x = (width - district_width) // 2 - 15
             circle_y = height - 25
             draw.ellipse(
-                [(circle_x - circle_size, circle_y - circle_size), 
-                 (circle_x + circle_size, circle_y + circle_size)],
+                ((circle_x - circle_size, circle_y - circle_size), 
+                 (circle_x + circle_size, circle_y + circle_size)),
                 fill=(r_base, g_base, b_base)
             )
             
@@ -1299,7 +1299,7 @@ def generate_venue_image(business_name, deal_text, location, district=None, rati
             x = random.randint(0, width)
             y = random.randint(header_height + 100, height - 100)
             color = random.choice(circle_colors)
-            draw.ellipse([(x - size // 2, y - size // 2), (x + size // 2, y + size // 2)], 
+            draw.ellipse(((x - size // 2, y - size // 2), (x + size // 2, y + size // 2)), 
                          fill=color)
         
         # Draw business name with a subtle shadow for depth
@@ -1411,7 +1411,7 @@ def generate_venue_image(business_name, deal_text, location, district=None, rati
         
         # Draw the pin head
         draw.ellipse(
-            [(pin_x - pin_radius, pin_y - pin_radius), (pin_x + pin_radius, pin_y + pin_radius)],
+            ((pin_x - pin_radius, pin_y - pin_radius), (pin_x + pin_radius, pin_y + pin_radius)),
             fill=(220, 53, 69)  # Red for the pin
         )
         

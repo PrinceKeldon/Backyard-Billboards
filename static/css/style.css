@@ -129,6 +129,29 @@ html, body {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
+/* Deal thumbnail styles */
+.card-img-top-container {
+    position: relative;
+    height: 225px;
+    overflow: hidden;
+}
+
+.deal-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.thumbnail-link {
+    display: block;
+    overflow: hidden;
+}
+
+.deal-card:hover .deal-thumbnail {
+    transform: scale(1.05);
+}
+
 .deal-card:hover .card-header {
     background: linear-gradient(to right, #9f2f3f, #b03747);
 }
