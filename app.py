@@ -35,28 +35,19 @@ os.environ["RESTRICT_TO_BERLIN"] = "true"           # Flag to restrict all resul
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "backyard-billboards-local-dev-secret-key")
 
-# Temporarily disable Flask-Login to fix authentication issues
-# login_manager = LoginManager()
-# login_manager.init_app(app)
-# login_manager.login_view = 'login'
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return User.get(user_id)
-
-# Create a mock current_user for templates
-class MockUser:
-    is_authenticated = False
-    is_active = False
-    is_anonymous = True
-    
-    def get_id(self):
-        return None
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 # Add to app context
 @app.context_processor
 def inject_user():
-    return {'current_user': MockUser()}
+    return {}
 
 # Import and register Jinja filters
 from utils import get_time_ago
@@ -399,14 +390,13 @@ def signup():
     return render_template('signup.html')
 
 @app.route('/logout')
-# @login_required - temporarily disabled
+@login_required
 def logout():
     logout_user()
     flash('Logged out successfully.', 'success')
     return redirect(url_for('home'))
 
 @app.route("/submit", methods=["GET", "POST"])
-# @login_required - temporarily disabled
 def submit_deal():
     """Route for manual deal submission"""
     if request.method == "POST":
@@ -726,58 +716,85 @@ def remove_austin_texas():
 
 # Note: We've already defined page_not_found handler earlier
 
-@app.route("/ai_recommendation", methods=["POST"])
-def ai_recommendation():
-    """Route to get AI-powered venue recommendations based on user preferences"""
-    try:
-        # Get user preferences from form
-        preferences = {
-            "district": request.form.get("district", ""),
-            "price_range": request.form.get("price_range", ""),
-            "vibe": request.form.get("vibe", ""),
-            "drink_preference": request.form.get("drink_preference", ""),
-            "food_preference": request.form.get("food_preference", ""),
-            "time_preference": request.form.get("time_preference", "")
-        }
-        
-        # Get all deals from database
-        deals = deal_db.get_all_deals()
-        
-        # Get AI recommendations
-        recommendations = get_ai_recommendation(preferences, deals)
-        
-        # Return results as JSON for AJAX requests
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({
-                "status": "success",
-                "recommendations": recommendations["recommendations"],
-                "reasoning": recommendations["reasoning"]
-            })
-        
-        # Otherwise return the recommendations in the home template
-        flash("AI recommendations generated successfully!", "success")
-        return render_template(
-            "index.html", 
-            deals=deals,
-            recommendations=recommendations["recommendations"],
-            recommendation_reasoning=recommendations["reasoning"],
-            districts=sorted(list(set(d.get('district') for d in deals if d.get('district')))),
-            current_district=preferences["district"],
-            search_query="",
-            deal_type=""
-        )
-        
-    except Exception as e:
-        logger.error(f"Error generating AI recommendations: {str(e)}")
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({
-                "status": "error",
-                "message": f"Error generating recommendations: {str(e)}"
-            }), 500
+@app.route("/submit-hidden-gem", methods=["GET", "POST"])
+@login_required
+def submit_hidden_gem():
+    """Route for submitting hidden gems (requires login)"""
+    if request.method == "POST":
+        try:
+            business_name = request.form.get("business_name")
+            deal = request.form.get("deal", "")  # Deal is optional for hidden gems
+            location = request.form.get("location")
+            district = request.form.get("district")
+            recommendation = request.form.get("recommendation")
+            place_type = request.form.get("place_type", "")
+            price_level = request.form.get("price_level", "")
             
-        flash(f"Error generating recommendations: {str(e)}", "danger")
-        return redirect(url_for("home"))
+            # Validate required fields
+            if not business_name or not location or not recommendation:
+                flash("Business name, location, and recommendation description are required", "danger")
+                return redirect(url_for("submit_hidden_gem"))
+            
+            # Set hidden gem properties
+            kwargs = {
+                "district": district,
+                "has_accurate_location": True,
+                "is_hidden_gem": True,
+                "hidden_gem_description": recommendation,
+                "place_type": place_type,
+                "price_level": price_level if price_level else None,
+                "submitted_by": current_user.username  # Use the logged-in username
+            }
+            
+            # Add to database
+            deal_db.add_deal(
+                business_name, 
+                deal, 
+                location, 
+                **kwargs
+            )
+            
+            flash("Hidden gem submitted successfully! Thank you for your contribution.", "success")
+            return redirect(url_for("hidden_gems"))
+        
+        except Exception as e:
+            logger.error(f"Error submitting hidden gem: {str(e)}")
+            flash(f"Error submitting hidden gem: {str(e)}", "danger")
+            return redirect(url_for("submit_hidden_gem"))
+    
+    # GET request - show the form
+    # Get all Berlin districts for the dropdown
+    berlin_districts = [
+        "Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg", 
+        "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten",
+        "Lichtenberg", "Köpenick", "Spandau", "Steglitz", "Marzahn", "Wilmersdorf",
+        "Tempelhof", "Treptow", "Pankow", "Reinickendorf", "Zehlendorf"
+    ]
+    berlin_districts.sort()
+    
+    # Get existing districts from database to append to the list
+    try:
+        deals = deal_db.get_all_deals()
+        existing_districts = set(d.get('district') for d in deals if d.get('district'))
+        # Add any missing districts to the list
+        for district in existing_districts:
+            if district and district not in berlin_districts:
+                berlin_districts.append(district)
+        berlin_districts.sort()
+    except Exception as e:
+        logger.error(f"Error retrieving districts: {str(e)}")
+    
+    # Get count of hidden gems for the navigation badge
+    try:
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+    except:
+        hidden_gems_count = 0
+        
+    return render_template(
+        "submit_hidden_gem.html", 
+        districts=berlin_districts, 
+        hidden_gems_count=hidden_gems_count
+    )
 
 @app.route("/deal/<business_name>")
 def view_deal(business_name):
