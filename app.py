@@ -8,6 +8,7 @@ import base64
 import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
+from flask import Response, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import User
 from db import DealDB
@@ -37,7 +38,8 @@ cache = {
     'hidden_gems': [], 
     'late_night_deals': [],
     'districts': [],
-    'last_updated': 0
+    'last_updated': 0,
+    'thumbnail_cache': {}
 }
 
 # Cache duration in seconds
@@ -60,7 +62,8 @@ def clear_cache(keys=None):
             'hidden_gems': [],
             'late_night_deals': [], 
             'districts': [],
-            'last_updated': 0
+            'last_updated': 0,
+            'thumbnail_cache': {}
         }
         logger.debug("All application cache cleared")
     else:
@@ -70,7 +73,10 @@ def clear_cache(keys=None):
             
         # Clear only the specified keys
         for key in keys:
-            if key in cache:
+            if key == 'thumbnail_cache' and key in cache:
+                cache[key] = {}
+                logger.debug(f"Cache '{key}' cleared")
+            elif key in cache:
                 # Keep the structure but clear the data
                 if key == 'last_updated':
                     cache[key] = 0
@@ -1117,7 +1123,7 @@ def generate_deal_thumbnail(business_name, deal_text, district=None):
         # Add a semi-transparent overlay at the top for the business name
         overlay_height = 60
         draw.rectangle(
-            [(0, 0), (width, overlay_height)],
+            ((0, 0), (width, overlay_height)),
             fill=(0, 0, 0, 180)
         )
         
@@ -1137,7 +1143,7 @@ def generate_deal_thumbnail(business_name, deal_text, district=None):
         # Add a semi-transparent overlay at the bottom for the deal text
         overlay_height = 100
         draw.rectangle(
-            [(0, height - overlay_height), (width, height)],
+            ((0, height - overlay_height), (width, height)),
             fill=(0, 0, 0, 180)
         )
         
@@ -1656,6 +1662,64 @@ def generate_og_deal_image(business_name, deal_text, location, district=None, ra
         # Return default image path if there's an error
         with open("static/img/og-default.jpg", "rb") as f:
             return f.read()
+
+@app.route('/deal-thumbnail/<business_name>')
+def deal_thumbnail(business_name):
+    """
+    Route to generate and serve a thumbnail image for a deal in the list view
+    
+    Args:
+        business_name (str): Name of the business
+        
+    Returns:
+        Response: Thumbnail image response
+    """
+    # Create an image cache if it doesn't exist
+    if 'thumbnail_cache' not in cache:
+        cache['thumbnail_cache'] = {}
+        
+    try:
+        # Check cache first
+        cache_key = f"thumbnail_{business_name}"
+        if cache_key in cache['thumbnail_cache']:
+            return send_file(
+                io.BytesIO(cache['thumbnail_cache'][cache_key]),
+                mimetype="image/jpeg"
+            )
+            
+        # Decode the business name (it will be URL-encoded)
+        decoded_name = urllib.parse.unquote_plus(business_name)
+        
+        # Get the deal data
+        deal_data = deal_db.get_deal(decoded_name)
+        
+        if not deal_data:
+            # Return a 404 for not found
+            return Response(status=404)
+            
+        # Generate the thumbnail
+        thumbnail_image = generate_deal_thumbnail(
+            decoded_name,
+            deal_data.get("deal", ""),
+            deal_data.get("district")
+        )
+        
+        if not thumbnail_image:
+            # Return a 500 for generation failure
+            return Response(status=500)
+            
+        # Cache the image
+        cache['thumbnail_cache'][cache_key] = thumbnail_image
+            
+        # Return the generated image
+        return send_file(
+            io.BytesIO(thumbnail_image),
+            mimetype="image/jpeg"
+        )
+            
+    except Exception as e:
+        logger.error(f"Error generating thumbnail image: {str(e)}")
+        return Response(status=500)
 
 @app.route('/og-image/<business_name>')
 def og_image(business_name):
