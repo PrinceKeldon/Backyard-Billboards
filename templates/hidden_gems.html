@@ -92,10 +92,20 @@
                         <div class="card h-100 deal-card">
                             <div class="card-header">
                                 <h5 class="mb-0 gemcard-title">
-                                    <a href="{{ url_for('view_deal', business_name=gem.business_name|urlencode) }}" class="text-decoration-none stretched-link">
+                                    <a href="{{ url_for('view_deal', business_name=gem.business_name|urlencode) }}" class="text-decoration-none">
                                         {{ gem.business_name }}
                                     </a>
                                 </h5>
+                            </div>
+                            <!-- Deal Thumbnail Image -->
+                            <div class="card-img-top-container">
+                                <a href="{{ url_for('view_deal', business_name=gem.business_name) }}" class="thumbnail-link">
+                                    <img src="{{ url_for('deal_thumbnail', business_name=gem.business_name) }}" 
+                                         class="card-img-top deal-thumbnail" 
+                                         alt="{{ gem.business_name }}" 
+                                         loading="lazy"
+                                         width="400" height="225">
+                                </a>
                             </div>
                             <div class="card-body">
                                 <p class="card-text">{{ gem.deal }}</p>
