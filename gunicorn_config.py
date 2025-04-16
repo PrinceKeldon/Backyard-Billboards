@@ -9,8 +9,8 @@ import multiprocessing
 port = int(os.environ.get("PORT", 5000))
 bind = f"0.0.0.0:{port}"
 
-# Specify the application
-wsgi_app = "wsgi:application"  # Explicitly set the WSGI application path
+# The WSGI application is defined in wsgi.py
+# Do not specify wsgi_app here as it's specified in the Procfile
 
 # Set workers based on CPU cores
 workers = multiprocessing.cpu_count() * 2 + 1
