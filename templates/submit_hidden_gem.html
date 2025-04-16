@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Submit Hidden Gem - Backyard Billboards{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card bg-dark border-primary">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0"><i class="fas fa-gem me-2"></i> Submit a Hidden Gem</h2>
+            </div>
+            <div class="card-body">
+                <p class="lead">Share your favorite hidden gem - a special venue that might not be on everyone's radar but deserves recognition!</p>
+                
+                {% if not current_user.is_authenticated %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    You need to <a href="{{ url_for('login') }}" class="alert-link">log in</a> or <a href="{{ url_for('signup') }}" class="alert-link">create an account</a> to submit a hidden gem.
+                </div>
+                {% else %}
+                <form method="POST" action="{{ url_for('submit_hidden_gem') }}">
+                    <div class="mb-3">
+                        <label for="business_name" class="form-label">Business Name *</label>
+                        <input type="text" class="form-control" id="business_name" name="business_name" required placeholder="e.g., Zur Letzten Instanz">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location *</label>
+                        <input type="text" class="form-control" id="location" name="location" required placeholder="e.g., Waisenstraße 14, 10179 Berlin">
+                        <div class="form-text">Please include the full address with street, number, postal code, and city.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="district" class="form-label">District</label>
+                        <input type="text" class="form-control" id="district" name="district" placeholder="e.g., Mitte, Kreuzberg, Neukölln">
+                        <div class="form-text">The Berlin district/neighborhood where the venue is located.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="deal" class="form-label">Happy Hour Deal (if any)</label>
+                        <input type="text" class="form-control" id="deal" name="deal" placeholder="e.g., Happy Hour 5-7pm: €4 Beer and €6 Cocktails">
+                        <div class="form-text">Leave blank if there's no specific happy hour deal.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="recommendation" class="form-label">Why is this a hidden gem? *</label>
+                        <textarea class="form-control" id="recommendation" name="recommendation" rows="4" required placeholder="Tell us what makes this place special. What's the atmosphere like? Why do you recommend it?"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="place_type" class="form-label">Venue Type</label>
+                        <select class="form-select" id="place_type" name="place_type">
+                            <option value="">Select type (optional)</option>
+                            <option value="Bar">Bar</option>
+                            <option value="Restaurant">Restaurant</option>
+                            <option value="Café">Café</option>
+                            <option value="Club">Club</option>
+                            <option value="Pub">Pub</option>
+                            <option value="Lounge">Lounge</option>
+                            <option value="Biergarten">Biergarten</option>
+                            <option value="Cocktail Bar">Cocktail Bar</option>
+                            <option value="Wine Bar">Wine Bar</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="price_level" class="form-label">Price Level</label>
+                        <select class="form-select" id="price_level" name="price_level">
+                            <option value="">Select price level (optional)</option>
+                            <option value="1">€ (Budget)</option>
+                            <option value="2">€€ (Moderate)</option>
+                            <option value="3">€€€ (Expensive)</option>
+                            <option value="4">€€€€ (Very Expensive)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i> Submit Hidden Gem
+                        </button>
+                        <a href="{{ url_for('hidden_gems') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Back to Hidden Gems
+                        </a>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
