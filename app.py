@@ -8,7 +8,6 @@ import base64
 import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
-from flask import Response, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import User
 from db import DealDB
@@ -38,8 +37,7 @@ cache = {
     'hidden_gems': [], 
     'late_night_deals': [],
     'districts': [],
-    'last_updated': 0,
-    'thumbnail_cache': {}
+    'last_updated': 0
 }
 
 # Cache duration in seconds
@@ -62,8 +60,7 @@ def clear_cache(keys=None):
             'hidden_gems': [],
             'late_night_deals': [], 
             'districts': [],
-            'last_updated': 0,
-            'thumbnail_cache': {}
+            'last_updated': 0
         }
         logger.debug("All application cache cleared")
     else:
@@ -73,10 +70,7 @@ def clear_cache(keys=None):
             
         # Clear only the specified keys
         for key in keys:
-            if key == 'thumbnail_cache' and key in cache:
-                cache[key] = {}
-                logger.debug(f"Cache '{key}' cleared")
-            elif key in cache:
+            if key in cache:
                 # Keep the structure but clear the data
                 if key == 'last_updated':
                     cache[key] = 0
@@ -1066,157 +1060,6 @@ def internal_server_error(e):
     """Handle 500 errors"""
     return render_template("index.html", deals=[], error="Internal server error"), 500
 
-def generate_deal_thumbnail(business_name, deal_text, district=None):
-    """
-    Generate a small thumbnail image for a deal in the list view
-    
-    Args:
-        business_name (str): Name of the business
-        deal_text (str): The deal description
-        district (str, optional): Berlin district
-        
-    Returns:
-        bytes: Image data in bytes for thumbnail
-    """
-    try:
-        # Create a 400x225 image (16:9 aspect ratio but smaller for thumbnails)
-        width, height = 400, 225
-        
-        # Create a base image with a gradient background
-        img = Image.new('RGB', (width, height), color=(33, 37, 41))
-        draw = ImageDraw.Draw(img)
-        
-        # Colors based on district if available, or default color palette
-        if district:
-            # Create a hash from district name for consistent but unique colors
-            district_hash = hash(district) % 1000000
-            r_base = (district_hash % 200) + 55  # Range 55-255
-            g_base = ((district_hash // 1000) % 200) + 55
-            b_base = ((district_hash // 10000) % 200) + 55
-        else:
-            # Default color scheme for gradient
-            r_base, g_base, b_base = 120, 80, 160
-        
-        # Create a nice gradient background
-        for y in range(height):
-            # Create a gradient
-            progress = y / height
-            r = int(r_base - (progress * 50))
-            g = int(g_base - (progress * 30))
-            b = int(b_base - (progress * 40))
-            draw.line([(0, y), (width, y)], fill=(r, g, b), width=1)
-        
-        # Try to load fonts, fallback to default if not available
-        try:
-            title_font = ImageFont.truetype("Arial Bold.ttf", 24)
-            deal_font = ImageFont.truetype("Arial.ttf", 18)
-        except IOError:
-            try:
-                # Try with different font names
-                title_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 24)
-                deal_font = ImageFont.truetype("DejaVuSans.ttf", 18)
-            except IOError:
-                # Fallback to default font
-                title_font = ImageFont.load_default()
-                deal_font = ImageFont.load_default()
-        
-        # Add a semi-transparent overlay at the top for the business name
-        overlay_height = 60
-        draw.rectangle(
-            ((0, 0), (width, overlay_height)),
-            fill=(0, 0, 0, 180)
-        )
-        
-        # Draw business name with truncation if too long
-        if len(business_name) > 25:
-            business_name = business_name[:22] + "..."
-            
-        # Center the business name text
-        text_width = draw.textlength(business_name, font=title_font)
-        draw.text(
-            ((width - text_width) // 2, 18),
-            business_name,
-            font=title_font,
-            fill=(255, 255, 255)
-        )
-        
-        # Add a semi-transparent overlay at the bottom for the deal text
-        overlay_height = 100
-        draw.rectangle(
-            ((0, height - overlay_height), (width, height)),
-            fill=(0, 0, 0, 180)
-        )
-        
-        # Draw deal text with truncation
-        if len(deal_text) > 60:
-            deal_text = deal_text[:57] + "..."
-            
-        # Format and draw deal text - wrap if needed
-        max_chars_per_line = 30
-        formatted_deal = []
-        words = deal_text.split()
-        current_line = []
-        
-        for word in words:
-            if len(' '.join(current_line + [word])) <= max_chars_per_line:
-                current_line.append(word)
-            else:
-                formatted_deal.append(' '.join(current_line))
-                current_line = [word]
-        
-        if current_line:
-            formatted_deal.append(' '.join(current_line))
-        
-        # Limit to 2 lines maximum
-        if len(formatted_deal) > 2:
-            formatted_deal = formatted_deal[:1]
-            formatted_deal.append(formatted_deal[0][:27] + "...")
-        
-        # Draw the deal text lines
-        y_offset = height - overlay_height + 20
-        for line in formatted_deal:
-            text_width = draw.textlength(line, font=deal_font)
-            draw.text(
-                ((width - text_width) // 2, y_offset),
-                line,
-                font=deal_font,
-                fill=(255, 255, 255)
-            )
-            y_offset += 30
-        
-        # Draw a small icon representing the district or just a decorative element
-        if district:
-            district_label = district[:10] + ".." if len(district) > 10 else district
-            district_width = draw.textlength(district_label, font=deal_font)
-            
-            # Draw a small colored circle for the district
-            circle_size = 8
-            circle_x = (width - district_width) // 2 - 15
-            circle_y = height - 25
-            draw.ellipse(
-                ((circle_x - circle_size, circle_y - circle_size), 
-                 (circle_x + circle_size, circle_y + circle_size)),
-                fill=(r_base, g_base, b_base)
-            )
-            
-            # Draw the district name
-            draw.text(
-                ((width - district_width) // 2, height - 30),
-                district_label,
-                font=deal_font,
-                fill=(200, 200, 200)
-            )
-        
-        # Save the image to a byte array
-        img_byte_arr = io.BytesIO()
-        img.save(img_byte_arr, format='JPEG', quality=85)
-        return img_byte_arr.getvalue()
-        
-    except Exception as e:
-        logger.error(f"Error generating deal thumbnail: {str(e)}")
-        # Return None on error and let the caller handle it
-        return None
-
 def generate_venue_image(business_name, deal_text, location, district=None, rating=None):
     """
     Generate a stylized image for a venue detail page
@@ -1299,7 +1142,7 @@ def generate_venue_image(business_name, deal_text, location, district=None, rati
             x = random.randint(0, width)
             y = random.randint(header_height + 100, height - 100)
             color = random.choice(circle_colors)
-            draw.ellipse(((x - size // 2, y - size // 2), (x + size // 2, y + size // 2)), 
+            draw.ellipse([(x - size // 2, y - size // 2), (x + size // 2, y + size // 2)], 
                          fill=color)
         
         # Draw business name with a subtle shadow for depth
@@ -1411,7 +1254,7 @@ def generate_venue_image(business_name, deal_text, location, district=None, rati
         
         # Draw the pin head
         draw.ellipse(
-            ((pin_x - pin_radius, pin_y - pin_radius), (pin_x + pin_radius, pin_y + pin_radius)),
+            [(pin_x - pin_radius, pin_y - pin_radius), (pin_x + pin_radius, pin_y + pin_radius)],
             fill=(220, 53, 69)  # Red for the pin
         )
         
@@ -1662,64 +1505,6 @@ def generate_og_deal_image(business_name, deal_text, location, district=None, ra
         # Return default image path if there's an error
         with open("static/img/og-default.jpg", "rb") as f:
             return f.read()
-
-@app.route('/deal-thumbnail/<business_name>')
-def deal_thumbnail(business_name):
-    """
-    Route to generate and serve a thumbnail image for a deal in the list view
-    
-    Args:
-        business_name (str): Name of the business
-        
-    Returns:
-        Response: Thumbnail image response
-    """
-    # Create an image cache if it doesn't exist
-    if 'thumbnail_cache' not in cache:
-        cache['thumbnail_cache'] = {}
-        
-    try:
-        # Check cache first
-        cache_key = f"thumbnail_{business_name}"
-        if cache_key in cache['thumbnail_cache']:
-            return send_file(
-                io.BytesIO(cache['thumbnail_cache'][cache_key]),
-                mimetype="image/jpeg"
-            )
-            
-        # Decode the business name (it will be URL-encoded)
-        decoded_name = urllib.parse.unquote_plus(business_name)
-        
-        # Get the deal data
-        deal_data = deal_db.get_deal(decoded_name)
-        
-        if not deal_data:
-            # Return a 404 for not found
-            return Response(status=404)
-            
-        # Generate the thumbnail
-        thumbnail_image = generate_deal_thumbnail(
-            decoded_name,
-            deal_data.get("deal", ""),
-            deal_data.get("district")
-        )
-        
-        if not thumbnail_image:
-            # Return a 500 for generation failure
-            return Response(status=500)
-            
-        # Cache the image
-        cache['thumbnail_cache'][cache_key] = thumbnail_image
-            
-        # Return the generated image
-        return send_file(
-            io.BytesIO(thumbnail_image),
-            mimetype="image/jpeg"
-        )
-            
-    except Exception as e:
-        logger.error(f"Error generating thumbnail image: {str(e)}")
-        return Response(status=500)
 
 @app.route('/og-image/<business_name>')
 def og_image(business_name):

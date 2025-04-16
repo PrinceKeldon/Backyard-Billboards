@@ -170,16 +170,6 @@
                     </ul>
                 </div>
             </div>
-            <!-- Deal Thumbnail Image -->
-            <div class="card-img-top-container">
-                <a href="{{ url_for('view_deal', business_name=deal.business_name) }}" class="thumbnail-link">
-                    <img src="{{ url_for('deal_thumbnail', business_name=deal.business_name) }}" 
-                         class="card-img-top deal-thumbnail" 
-                         alt="{{ deal.business_name }}" 
-                         loading="lazy"
-                         width="400" height="225">
-                </a>
-            </div>
             <div class="card-body">
                 <p class="card-text deal-description">
                     <i class="fas fa-tag me-2 text-primary"></i>
