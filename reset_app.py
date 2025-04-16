@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    # Import app modules
-    from app import app, clear_cache, cache
+    # Import app modules - import wsgi.application to ensure consistent app reference
+    from wsgi import application as app
+    from app import clear_cache, cache
     import models
     logger.info("Successfully imported application modules")
 except ImportError as e:
@@ -45,8 +46,8 @@ def reset_application():
         business_name = deal.get('business_name')
         deal_text = deal.get('deal', '')
         
-        # Skip if no business name
-        if not business_name:
+        # Skip if no business name or deal text
+        if not business_name or not deal_text:
             continue
         
         # Check if this deal has currency placeholders
@@ -98,23 +99,40 @@ def reset_application():
     if not placeholders_found:
         logger.info("No currency placeholders found in the database")
     
-    # Step 3: Reset the application
-    logger.info("Resetting the application...")
+    # Step 3: Verify database integrity
+    logger.info("Verifying database integrity...")
     try:
-        # If this script is executed directly, restart with new cache
-        if __name__ == "__main__":
-            # Clear the cache again to ensure fresh data
-            clear_cache()
-            logger.info("Application cache cleared again to ensure fresh data")
+        # Check if we can retrieve deals
+        all_deals = deal_db.get_all_deals()
+        logger.info(f"Database integrity verified: Found {len(all_deals)} deals")
+        
+        # Check if we can retrieve hidden gems
+        hidden_gems = deal_db.get_hidden_gems()
+        logger.info(f"Database integrity verified: Found {len(hidden_gems)} hidden gems")
+        
+        # Check if we can retrieve late night deals
+        late_night_deals = deal_db.get_late_night_deals()
+        logger.info(f"Database integrity verified: Found {len(late_night_deals)} late night deals")
     except Exception as e:
-        logger.error(f"Error resetting application: {str(e)}")
+        logger.error(f"Database integrity check failed: {str(e)}")
+        return False
     
-    logger.info("Application reset process completed")
-    return not placeholders_found
+    # Step 4: Reset the application cache
+    logger.info("Resetting the application cache...")
+    try:
+        # Clear the cache again to ensure fresh data
+        clear_cache()
+        logger.info("Application cache cleared again to ensure fresh data")
+    except Exception as e:
+        logger.error(f"Error resetting application cache: {str(e)}")
+        return False
+    
+    logger.info("Application reset process completed successfully")
+    return True
 
 if __name__ == "__main__":
     success = reset_application()
     if success:
-        print("Application reset successful. All currency placeholders fixed.")
+        print("Application reset successful. All checks passed.")
     else:
-        print("Application reset completed but some issues may remain.")
+        print("Application reset completed but some issues were detected.")
