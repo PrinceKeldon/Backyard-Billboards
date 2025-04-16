@@ -242,6 +242,30 @@ def home():
             hidden_gems_count=hidden_gems_count
         )
 
+@app.route("/late-night-deals")
+def late_night_deals():
+    """Route to display deals available after 10 PM (afterparty deals)"""
+    try:
+        # Get late night deals
+        deals = deal_db.get_late_night_deals()
+        
+        # Get all unique districts for filtering
+        all_districts = sorted(list(set(deal.get('district') for deal in deals if deal.get('district'))))
+        
+        # Get count of hidden gems for the navigation badge
+        hidden_gems_count = len(deal_db.get_hidden_gems())
+        
+        return render_template(
+            'late_night_deals.html',
+            deals=deals,
+            districts=all_districts,
+            hidden_gems_count=hidden_gems_count
+        )
+    except Exception as e:
+        logger.error(f"Error displaying late night deals: {str(e)}")
+        flash(f"Error displaying late night deals: {str(e)}", "danger")
+        return render_template('error.html', error=str(e)), 500
+
 @app.route("/hidden-gems")
 def hidden_gems():
     """Route to display hidden gem venues submitted by users"""

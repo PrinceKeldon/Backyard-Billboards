@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Post-10PM Happy Hours - Backyard Billboards{% endblock %}
+
+{% block og_title %}Late Night Happy Hour Deals in Berlin - Backyard Billboards{% endblock %}
+{% block og_description %}Discover the best late night happy hour deals in Berlin after 10 PM. Find late night drink specials for your afterparty adventures.{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex align-items-center mb-4">
+            <h1 class="display-5 mb-0">
+                <i class="fas fa-moon me-2 text-warning"></i> Post-10PM Happy Hours
+            </h1>
+        </div>
+        
+        <div class="alert alert-dark">
+            <div class="row align-items-center">
+                <div class="col-md-9">
+                    <h4><i class="fas fa-info-circle me-2"></i> Late Night Party Specials</h4>
+                    <p class="mb-0">These are all happy hour deals that last past 10 PM. Perfect for afterparty adventures and night owls.</p>
+                </div>
+                <div class="col-md-3 text-end">
+                    <span class="badge bg-danger p-2">
+                        <i class="fas fa-fire me-1"></i> Flash Deals
+                    </span>
+                    <small class="d-block mt-1 text-muted">Shot specials marked with fire icon</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- District filter -->
+        {% if districts and districts|length > 1 %}
+        <div class="mb-4">
+            <form method="get" action="{{ url_for('late_night_deals') }}" class="district-filter-form">
+                <div class="input-group">
+                    <label class="input-group-text" for="districtSelect">
+                        <i class="fas fa-map-marker-alt me-1"></i> District
+                    </label>
+                    <select class="form-select" id="districtSelect" name="district" onchange="this.form.submit()">
+                        <option value="">All Districts</option>
+                        {% for district in districts %}
+                        <option value="{{ district }}" {% if current_district == district %}selected{% endif %}>
+                            {{ district }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+        
+        {% if deals %}
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
+                {% for deal in deals %}
+                <div class="col">
+                    <div class="card h-100 deal-card {% if deal.is_premium %}premium-card{% endif %}">
+                        <!-- Premium badge for shot specials -->
+                        {% if deal.is_premium %}
+                        <div class="ribbon ribbon-top-right">
+                            <span>
+                                <i class="fas fa-fire"></i> Flash Deal!
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="card-header d-flex justify-content-between align-items-center {% if deal.is_premium %}bg-danger{% else %}bg-dark{% endif %}">
+                            <h5 class="card-title mb-0 nightcard-title">
+                                <a href="{{ url_for('view_deal', business_name=deal.business_name) }}" class="text-decoration-none text-white stretched-link">
+                                    {{ deal.business_name }}
+                                </a>
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ deal.deal }}</p>
+                            
+                            <!-- Location info -->
+                            <div class="d-flex align-items-start mt-3">
+                                <i class="fas fa-map-marker-alt text-danger mt-1 me-2"></i>
+                                <div>
+                                    <small class="text-muted">
+                                        {% if deal.district %}
+                                            <span class="fw-bold">{{ deal.district }}</span> - 
+                                        {% endif %}
+                                        {{ deal.location }}
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <!-- Rating if available -->
+                            {% if deal.rating %}
+                            <div class="d-flex align-items-center mt-2">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                <div>
+                                    <small class="text-muted">
+                                        {{ deal.rating }} {% if deal.reviews_count %}({{ deal.reviews_count }} reviews){% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Place type if available -->
+                            {% if deal.place_type %}
+                            <div class="d-flex align-items-center mt-2">
+                                <i class="fas fa-store text-info me-2"></i>
+                                <div>
+                                    <small class="text-muted">
+                                        {{ deal.place_type }}
+                                    </small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-dark d-flex justify-content-between align-items-center">
+                            <!-- Upvote form -->
+                            <form method="post" action="{{ url_for('upvote_deal') }}" class="upvote-form">
+                                <input type="hidden" name="business_name" value="{{ deal.business_name }}">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-thumbs-up"></i> 
+                                    <span class="vote-count">{{ deal.votes if deal.votes else 0 }}</span>
+                                </button>
+                            </form>
+                            
+                            <!-- View details link -->
+                            <a href="{{ url_for('view_deal', business_name=deal.business_name) }}" class="text-decoration-none text-muted">
+                                <small>View Details <i class="fas fa-chevron-right ms-1"></i></small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <h4 class="alert-heading"><i class="fas fa-info-circle me-2"></i> No Late Night Deals Found</h4>
+                <p>There are no late night happy hour deals in our database yet{% if current_district %} for {{ current_district }}{% endif %}.</p>
+                <hr>
+                <p class="mb-0">
+                    Know a place with late night deals? 
+                    <a href="{{ url_for('submit_deal') }}" class="alert-link">Submit one now!</a>
+                </p>
+            </div>
+        {% endif %}
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add special styling for night cards
+        const nightCards = document.querySelectorAll('.deal-card');
+        nightCards.forEach(card => {
+            if (!card.classList.contains('premium-card')) {
+                card.style.borderColor = '#343a40';
+                const cardHeader = card.querySelector('.card-header');
+                if (cardHeader) {
+                    cardHeader.style.background = 'linear-gradient(135deg, #343a40 0%, #212529 100%)';
+                    cardHeader.style.color = 'white';
+                }
+            } else {
+                // Special styling for premium cards (shot specials)
+                card.style.borderColor = '#dc3545';
+                const cardHeader = card.querySelector('.card-header');
+                if (cardHeader) {
+                    cardHeader.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                    cardHeader.style.color = 'white';
+                }
+            }
+            
+            const cardTitle = card.querySelector('.nightcard-title a');
+            if (cardTitle) {
+                cardTitle.style.color = 'white';
+                cardTitle.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
+            }
+        });
+        
+        // Handle upvote forms with AJAX
+        const upvoteForms = document.querySelectorAll('.upvote-form');
+        upvoteForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const button = form.querySelector('button');
+                const voteCount = button.querySelector('.vote-count');
+                
+                // Disable button temporarily
+                button.disabled = true;
+                
+                fetch('/upvote', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update the vote count
+                        voteCount.textContent = data.vote_count;
+                        
+                        // Add a brief animation
+                        button.classList.add('btn-success');
+                        button.classList.remove('btn-outline-secondary');
+                        
+                        // Reset after animation
+                        setTimeout(() => {
+                            button.classList.remove('btn-success');
+                            button.classList.add('btn-outline-secondary');
+                            button.disabled = false;
+                        }, 1000);
+                    } else {
+                        console.error('Error upvoting:', data.message);
+                        button.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    button.disabled = false;
+                });
+            });
+        });
+    });
+</script>
+
+<style>
+    /* Ribbon for premium deals */
+    .ribbon {
+        width: 150px;
+        height: 150px;
+        overflow: hidden;
+        position: absolute;
+        z-index: 1;
+    }
+    
+    .ribbon-top-right {
+        top: -10px;
+        right: -10px;
+    }
+    
+    .ribbon-top-right::before,
+    .ribbon-top-right::after {
+        border-top-color: transparent;
+        border-right-color: transparent;
+    }
+    
+    .ribbon-top-right::before {
+        top: 0;
+        left: 0;
+    }
+    
+    .ribbon-top-right::after {
+        bottom: 0;
+        right: 0;
+    }
+    
+    .ribbon-top-right span {
+        position: absolute;
+        display: block;
+        width: 225px;
+        padding: 8px 0;
+        background-color: #dc3545;
+        box-shadow: 0 5px 10px rgba(0,0,0,.1);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        text-shadow: 0 1px 1px rgba(0,0,0,.2);
+        text-transform: uppercase;
+        text-align: center;
+        right: -25px;
+        top: 30px;
+        transform: rotate(45deg);
+    }
+    
+    /* Premium card animation */
+    .premium-card {
+        position: relative;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        }
+    }
+</style>
+{% endblock %}

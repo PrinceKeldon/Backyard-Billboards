@@ -286,3 +286,70 @@ class DealDB:
         except Exception as e:
             logger.error(f"Error getting hidden gems: {str(e)}")
             raise
+    
+    def get_late_night_deals(self, limit=None):
+        """
+        Get deals that are available after 10 PM (afterparty deals)
+        
+        Args:
+            limit (int, optional): Maximum number of deals to return
+            
+        Returns:
+            list: List of late night deals
+        """
+        try:
+            deals = self.get_all_deals()
+            late_night_deals = []
+            
+            for deal in deals:
+                deal_text = deal.get('deal', '').lower()
+                
+                # Check for time indicators after 10 PM
+                has_late_time = False
+                if any(time_str in deal_text for time_str in [
+                    '22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
+                    '10pm', '11pm', '12am', '1am', '2am', '3am', '4am', '5am', 
+                    '22 uhr', '23 uhr', '00 uhr', '01 uhr', '02 uhr', '03 uhr', '04 uhr', '05 uhr',
+                    'midnight', 'mitternacht', 'late night', 'after 10'
+                ]):
+                    has_late_time = True
+                
+                # Check for after-hours indicators
+                is_afterparty = any(indicator in deal_text for indicator in [
+                    'afterparty', 'after party', 'after-party', 'after hours', 
+                    'late night', 'nachts', 'night owl', 'spätabends'
+                ])
+                
+                # Check for shot specials
+                has_shots = any(shot_term in deal_text for shot_term in [
+                    'shot', 'shots', 'schnapps', 'schnaps', 'jägermeister', 'tequila', 'vodka'
+                ])
+                
+                # Add to late night deals if it meets the criteria
+                if has_late_time or is_afterparty:
+                    # Create a copy of the deal
+                    late_night_deal = deal.copy()
+                    
+                    # Add premium flag for deals with shots (for 2x revenue share)
+                    if has_shots:
+                        late_night_deal['is_premium'] = True
+                        late_night_deal['revenue_multiplier'] = 2
+                    
+                    late_night_deals.append(late_night_deal)
+            
+            # Sort late night deals by whether they're premium (shots) first, then by votes
+            late_night_deals = sorted(
+                late_night_deals, 
+                key=lambda x: (x.get('is_premium', False), x.get('votes', 0)), 
+                reverse=True
+            )
+            
+            # Apply limit if provided
+            if limit:
+                late_night_deals = late_night_deals[:limit]
+            
+            logger.debug(f"Returning {len(late_night_deals)} late night deals")
+            return late_night_deals
+        except Exception as e:
+            logger.error(f"Error getting late night deals: {str(e)}")
+            raise
