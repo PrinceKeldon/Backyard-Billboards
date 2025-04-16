@@ -31,6 +31,61 @@ os.environ["GOOGLE_MAPS_ENRICHMENT_LIMIT"] = "2"    # Limit to 2 deals per reque
 os.environ["DEFAULT_LOCATION"] = "Berlin, Germany"  # Restrict all searches to Berlin, Germany
 os.environ["RESTRICT_TO_BERLIN"] = "true"           # Flag to restrict all results to Berlin only
 
+# Simple cache implementation to reduce database calls
+cache = {
+    'deals': [],
+    'hidden_gems': [], 
+    'late_night_deals': [],
+    'districts': [],
+    'last_updated': 0
+}
+
+# Cache duration in seconds
+CACHE_DURATION = 300  # 5 minutes
+
+def clear_cache():
+    """Clear the application cache"""
+    global cache
+    cache = {
+        'deals': [],
+        'hidden_gems': [],
+        'late_night_deals': [], 
+        'districts': [],
+        'last_updated': 0
+    }
+    logger.debug("Application cache cleared")
+
+def get_cached_data(key, fetch_func, *args, **kwargs):
+    """Get data from cache if available and fresh, otherwise fetch and cache it
+    
+    Args:
+        key (str): Cache key
+        fetch_func (function): Function to call if cache is stale
+        
+    Returns:
+        any: The cached or freshly fetched data
+    """
+    global cache
+    current_time = time.time()
+    
+    # If cache is stale (older than the cache duration)
+    if current_time - cache['last_updated'] > CACHE_DURATION:
+        # Clear the entire cache
+        clear_cache()
+        cache['last_updated'] = current_time
+        
+        # Fetch and store the requested data
+        data = fetch_func(*args, **kwargs)
+        cache[key] = data if data is not None else []
+        logger.debug(f"Cache '{key}' refreshed")
+    elif not cache[key]:  # The specific key is empty but cache is not stale
+        # Only fetch data for this key
+        data = fetch_func(*args, **kwargs)
+        cache[key] = data if data is not None else []
+        logger.debug(f"Cache '{key}' refreshed while maintaining other cached data")
+    
+    return cache[key]
+
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "backyard-billboards-local-dev-secret-key")
@@ -131,7 +186,8 @@ def rate_limit():
 def home():
     """Home page route - displays all deals with filtering options"""
     try:
-        deals = deal_db.get_all_deals()
+        # Get deals from cache
+        deals = get_cached_data('deals', deal_db.get_all_deals)
         
         # Clean the dataset - filter out non-Berlin locations and USD prices
         filtered_deals = []
@@ -185,7 +241,10 @@ def home():
                                  'am:' in d.get('deal', '').lower()]
         
         # Get all unique districts for the filter dropdown
-        districts = sorted(list(set(d.get('district') for d in filtered_deals if d.get('district'))))
+        districts = get_cached_data(
+            'districts',
+            lambda: sorted(list(set(d.get('district') for d in filtered_deals if d.get('district'))))
+        )
         
         # First sort by district match (if district filter is active), then by date
         if district:
@@ -211,8 +270,8 @@ def home():
             filtered_deals = sorted(filtered_deals, key=lambda x: x.get("scraped_at", ""), reverse=True)
         
         # Return the filtered deals with all filter parameters
-        # Get count of hidden gems for the navigation badge
-        hidden_gems_count = len(deal_db.get_hidden_gems())
+        # Get count of hidden gems for the navigation badge (using cache)
+        hidden_gems_count = len(get_cached_data('hidden_gems', deal_db.get_hidden_gems))
         
         return render_template(
             "index.html", 
@@ -228,7 +287,7 @@ def home():
         flash(f"Error retrieving deals: {str(e)}", "danger")
         # Still try to get hidden gems count for navigation
         try:
-            hidden_gems_count = len(deal_db.get_hidden_gems())
+            hidden_gems_count = len(get_cached_data('hidden_gems', deal_db.get_hidden_gems))
         except:
             hidden_gems_count = 0
             
@@ -246,19 +305,27 @@ def home():
 def late_night_deals():
     """Route to display deals available after 10 PM (afterparty deals)"""
     try:
-        # Get late night deals
-        deals = deal_db.get_late_night_deals()
+        # Get late night deals (using cache)
+        deals = get_cached_data('late_night_deals', deal_db.get_late_night_deals)
+        
+        # Get district filter parameter
+        district = request.args.get('district', '')
+        
+        # Apply district filter if specified
+        if district:
+            deals = [d for d in deals if d.get('district') and d.get('district').lower() == district.lower()]
         
         # Get all unique districts for filtering
         all_districts = sorted(list(set(deal.get('district') for deal in deals if deal.get('district'))))
         
-        # Get count of hidden gems for the navigation badge
-        hidden_gems_count = len(deal_db.get_hidden_gems())
+        # Get count of hidden gems for the navigation badge (using cache)
+        hidden_gems_count = len(get_cached_data('hidden_gems', deal_db.get_hidden_gems))
         
         return render_template(
             'late_night_deals.html',
             deals=deals,
             districts=all_districts,
+            current_district=district,
             hidden_gems_count=hidden_gems_count
         )
     except Exception as e:
@@ -273,11 +340,14 @@ def hidden_gems():
         # Get filter parameters
         district = request.args.get('district', '')
         
-        # Get hidden gems, with optional district filter
+        # Get hidden gems from cache
+        all_gems = get_cached_data('hidden_gems', deal_db.get_hidden_gems)
+        
+        # Apply district filter if specified
         if district:
-            gems = deal_db.get_hidden_gems(district=district)
+            gems = [gem for gem in all_gems if gem.get('district') == district]
         else:
-            gems = deal_db.get_hidden_gems()
+            gems = all_gems
             
         # Set up pagination
         page = request.args.get('page', 1, type=int)
@@ -300,7 +370,10 @@ def hidden_gems():
         }
         
         # Get all unique districts for filtering
-        all_districts = sorted(list(set(gem.get('district') for gem in gems if gem.get('district'))))
+        all_districts = get_cached_data(
+            'districts', 
+            lambda: sorted(list(set(gem.get('district') for gem in all_gems if gem.get('district'))))
+        )
         
         # Construct pagination URL
         pagination_url = url_for('hidden_gems')
@@ -314,6 +387,7 @@ def hidden_gems():
             current_district=district,
             pagination=pagination,
             current_page=page,
+            pagination_url=pagination_url,
             hidden_gems_count=total_gems
         )
     except Exception as e:
@@ -370,6 +444,9 @@ def scrape_deals():
                 location,
                 **deal_props
             )
+        
+        # Clear cache after new deals added
+        clear_cache()
         
         flash(f"Successfully scraped {len(scraped_deals)} deals{' with Google Maps data' if use_google_maps else ''}!", "success")
     except Exception as e:
