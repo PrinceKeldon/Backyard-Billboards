@@ -1,10 +1,11 @@
+
 """
 Gunicorn configuration file for Backyard Billboards application
 """
 import os
 
 # Port configuration - using exactly the format requested
-bind = "0.0.0.0:" + str(os.environ.get("PORT", 8000))
+bind = "0.0.0.0:" + str(os.environ.get("PORT", 5000))
 
 # Worker configuration - keep simple for Replit
 workers = 1
