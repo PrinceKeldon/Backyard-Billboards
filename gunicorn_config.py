@@ -7,7 +7,7 @@ import multiprocessing
 
 # Port configuration - using exactly the format requested 
 # This is critical for deployment - must use PORT env variable
-bind = "0.0.0.0:" + str(os.environ.get("PORT", 8000))
+bind = "0.0.0.0:" + str(os.environ.get("PORT", 5000))
 
 # Worker configuration - simple and reliable for Replit
 workers = 1
