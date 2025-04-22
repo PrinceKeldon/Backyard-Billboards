@@ -1,2 +1,2 @@
 
-web: ./run.sh
+web: gunicorn wsgi:application
