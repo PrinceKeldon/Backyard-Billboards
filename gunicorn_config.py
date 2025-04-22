@@ -4,8 +4,8 @@ Gunicorn configuration file for Backyard Billboards application
 """
 import os
 
-# Port configuration - using exactly the format requested
-bind = "0.0.0.0:" + str(os.environ.get("PORT", 5000))
+# Port configuration for production deployment
+bind = "0.0.0.0:5000"
 
 # Worker configuration - keep simple for Replit
 workers = 1
@@ -15,11 +15,11 @@ worker_class = "sync"
 timeout = 120
 keepalive = 60
 
-# Logging - stdout/stderr for easy troubleshooting
+# Logging
 accesslog = "-"
 errorlog = "-"
 loglevel = "info"
 
 # Deployment settings
 daemon = False
-reload = True
+reload = False  # Disable reload in production
