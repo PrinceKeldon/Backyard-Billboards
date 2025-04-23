@@ -9,4 +9,4 @@ export PORT=${PORT:-8000}
 
 # Start the application using gunicorn
 echo "Starting gunicorn on port $PORT..."
-exec gunicorn wsgi:application --bind 0.0.0.0:$PORT --access-logfile - --error-logfile - --log-level debug
+exec gunicorn main:app --bind 0.0.0.0:$PORT --access-logfile - --error-logfile - --log-level info

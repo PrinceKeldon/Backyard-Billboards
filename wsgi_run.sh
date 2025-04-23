@@ -3,4 +3,4 @@
 # It ensures consistent configuration between development and production
 
 # Use gunicorn to serve the WSGI application
-gunicorn --bind 0.0.0.0:5000 --reuse-port --reload wsgi:application
+gunicorn --bind 0.0.0.0:8000 --reuse-port --reload main:app
