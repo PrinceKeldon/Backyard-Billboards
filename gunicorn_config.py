@@ -5,9 +5,10 @@ Gunicorn configuration file for Backyard Billboards application
 import os
 import multiprocessing
 
-# Port configuration - using exactly the format requested 
+# Port configuration - using exactly the format requested
 # This is critical for deployment - must use PORT env variable
-bind = "0.0.0.0:" + str(os.environ.get("PORT", 5000))
+port = os.environ.get("PORT", "8000")
+bind = f"0.0.0.0:{port}"
 
 # Worker configuration - simple and reliable for Replit
 workers = 1
