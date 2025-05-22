@@ -352,17 +352,20 @@ html, body {
 /* Palette dropdown animations */
 #paletteDropdown + .dropdown-menu {
     transition: transform 0.2s, opacity 0.2s;
+    display: block;
 }
 
 #paletteDropdown + .dropdown-menu.show {
     transform: translateY(0) scale(1);
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 #paletteDropdown + .dropdown-menu:not(.show) {
-    display: block;
     transform: translateY(-10px) scale(0.95);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
 }
 

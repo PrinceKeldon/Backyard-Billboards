@@ -219,50 +219,10 @@
                             <i class="fas fa-moon me-1" id="theme-icon"></i> <span id="theme-text">Light Mode</span>
                         </button>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="paletteDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#colorPaletteModal">
                             <i class="fas fa-palette me-1"></i> Colors
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end p-3" style="width: 300px;">
-                            <h6 class="dropdown-header">Color Palette</h6>
-                            <div class="mb-3">
-                                <label for="palette-selector" class="form-label">Choose Palette</label>
-                                <select class="form-select form-select-sm" id="palette-selector">
-                                    <!-- Options populated by JavaScript -->
-                                </select>
-                            </div>
-                            <div id="color-customizer">
-                                <h6 class="dropdown-header">Customize Colors</h6>
-                                <div class="d-flex flex-wrap justify-content-between mb-2">
-                                    <div class="color-swatch" data-color="primary">
-                                        <label class="form-label small">Primary</label>
-                                        <input type="color" class="form-control form-control-color" data-color="primary">
-                                    </div>
-                                    <div class="color-swatch" data-color="secondary">
-                                        <label class="form-label small">Secondary</label>
-                                        <input type="color" class="form-control form-control-color" data-color="secondary">
-                                    </div>
-                                    <div class="color-swatch" data-color="accent">
-                                        <label class="form-label small">Accent</label>
-                                        <input type="color" class="form-control form-control-color" data-color="accent">
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <div class="color-swatch" data-color="light">
-                                        <label class="form-label small">Light</label>
-                                        <input type="color" class="form-control form-control-color" data-color="light">
-                                    </div>
-                                    <div class="color-swatch" data-color="dark">
-                                        <label class="form-label small">Dark</label>
-                                        <input type="color" class="form-control form-control-color" data-color="dark">
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <button id="reset-palette" class="btn btn-sm btn-outline-secondary">Reset</button>
-                                    <button id="save-palette" class="btn btn-sm btn-primary">Save</button>
-                                </div>
-                            </div>
-                        </div>
                     </li>
                 </ul>
             </div>
@@ -300,6 +260,97 @@
             </span>
         </div>
     </footer>
+
+    <!-- Color Palette Modal -->
+    <div class="modal fade" id="colorPaletteModal" tabindex="-1" aria-labelledby="colorPaletteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="colorPaletteModalLabel">
+                        <i class="fas fa-palette me-2"></i>Customize Colors
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label for="palette-selector" class="form-label fw-bold">Choose Predefined Palette</label>
+                        <select class="form-select" id="palette-selector">
+                            <!-- Options populated by JavaScript -->
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div id="color-customizer">
+                        <h6 class="mb-3 fw-bold">Customize Individual Colors</h6>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <div class="color-swatch" data-color="primary">
+                                    <label class="form-label">Primary</label>
+                                    <input type="color" class="form-control form-control-color w-100" data-color="primary">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="color-swatch" data-color="secondary">
+                                    <label class="form-label">Secondary</label>
+                                    <input type="color" class="form-control form-control-color w-100" data-color="secondary">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="color-swatch" data-color="accent">
+                                    <label class="form-label">Accent</label>
+                                    <input type="color" class="form-control form-control-color w-100" data-color="accent">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="color-swatch" data-color="light">
+                                    <label class="form-label">Light Theme</label>
+                                    <input type="color" class="form-control form-control-color w-100" data-color="light">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="color-swatch" data-color="dark">
+                                    <label class="form-label">Dark Theme</label>
+                                    <input type="color" class="form-control form-control-color w-100" data-color="dark">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="preview-section mb-4">
+                            <h6 class="mb-3">Preview</h6>
+                            <div class="preview-card p-3 rounded mb-2" style="background: linear-gradient(to right, var(--bb-primary), var(--bb-secondary))">
+                                <p class="mb-0 text-center">Header/Footer Background</p>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="preview-card bg-light p-2 rounded text-center">
+                                        Light Mode Text
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="preview-card bg-dark p-2 rounded text-center">
+                                        Dark Mode Text
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="reset-palette" class="btn btn-outline-secondary">
+                        <i class="fas fa-undo me-1"></i> Reset to Default
+                    </button>
+                    <button type="button" id="save-palette" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Save Custom Palette
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap JS with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
