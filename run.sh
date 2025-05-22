@@ -5,7 +5,7 @@ echo "Starting Backyard Billboards application..."
 echo "Environment: $(printenv | grep -E 'PORT|REPL_')"
 
 # Set default port if not provided
-export PORT=${PORT:-8000}
+export PORT=${PORT:-5000}
 
 # Start the application using gunicorn
 echo "Starting gunicorn on port $PORT..."
