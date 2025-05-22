@@ -56,22 +56,18 @@
                     </div>
                 </div>
                 
-                <!-- Deal type filter buttons - restricting to Drinks and Happy Hour only -->
+                <!-- Unified deals filter buttons -->
                 <div class="col-12 mt-2">
                     <div class="btn-group w-100" role="group">
                         <input type="radio" class="btn-check" name="deal_type" id="all_deals" value="" autocomplete="off" {% if not deal_type %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="all_deals">All Berlin Deals</label>
-                        
-                        <input type="radio" class="btn-check" name="deal_type" id="drinks" value="drink" autocomplete="off" {% if deal_type == 'drink' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="drinks">Drink Deals</label>
+                        <label class="btn btn-outline-secondary" for="all_deals" style="font-family: 'Poppins', sans-serif; font-weight: 600;">
+                            <i class="fas fa-glass-cheers me-1" style="color: #FFCF3F;"></i> All Happy Hour Deals
+                        </label>
                         
                         <!-- Hidden Gems Button -->
-                        <a href="{{ url_for('hidden_gems') }}" class="btn btn-primary ms-2">
-                            <i class="fas fa-gem me-1"></i> Hidden Gems
+                        <a href="{{ url_for('hidden_gems') }}" class="btn btn-primary ms-2" style="background-color: #FF595E; border-color: #FF595E; font-family: 'Poppins', sans-serif; font-weight: 600;">
+                            <i class="fas fa-gem me-1" style="color: #FFCF3F;"></i> Hidden Gems
                         </a>
-                        
-                        <input type="radio" class="btn-check" name="deal_type" id="happy_hour" value="happy hour" autocomplete="off" {% if deal_type == 'happy hour' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary" for="happy_hour">Happy Hour Specials</label>
                     </div>
                 </div>
                 
