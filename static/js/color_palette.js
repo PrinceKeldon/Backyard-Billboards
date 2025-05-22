@@ -61,10 +61,34 @@ function initColorPalette() {
   // Apply the current palette
   applyColorPalette(currentPalette);
   
-  // Set up event listeners for palette selector
+  // Set up event listeners once DOM is loaded
   document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded, initializing color palette customizer");
+    
+    // Initialize the Bootstrap modal
+    const colorModal = document.getElementById('colorPaletteModal');
+    if (colorModal) {
+      console.log("Color palette modal found in DOM");
+      // Create a Bootstrap modal instance to ensure proper functionality
+      const modalInstance = new bootstrap.Modal(colorModal);
+      
+      // Get the modal trigger button
+      const modalTrigger = document.querySelector('a[data-bs-target="#colorPaletteModal"]');
+      if (modalTrigger) {
+        console.log("Modal trigger button found");
+        modalTrigger.addEventListener('click', (e) => {
+          e.preventDefault();
+          console.log("Modal trigger clicked, showing modal");
+          modalInstance.show();
+        });
+      }
+    } else {
+      console.error("Color palette modal not found in DOM");
+    }
+    
     const paletteSelector = document.getElementById('palette-selector');
     if (paletteSelector) {
+      console.log("Palette selector found, populating options");
       // Populate selector with options
       for (const palette in palettes) {
         const option = document.createElement('option');
@@ -78,8 +102,11 @@ function initColorPalette() {
       
       // Add event listener for changes
       paletteSelector.addEventListener('change', (e) => {
+        console.log("Palette changed to:", e.target.value);
         applyColorPalette(e.target.value);
       });
+    } else {
+      console.error("Palette selector not found in DOM");
     }
     
     // Set up the color customizer
@@ -290,5 +317,86 @@ function loadPalettesFromStorage() {
 // Load custom palettes on script load
 loadPalettesFromStorage();
 
-// Initialize color palette
-initColorPalette();
+/**
+ * Close the color palette modal
+ */
+function closeColorPaletteModal() {
+  const modal = document.getElementById('colorPaletteModal');
+  if (modal) {
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    
+    // Remove backdrop
+    const backdrop = document.getElementById('color-palette-backdrop');
+    if (backdrop) {
+      backdrop.remove();
+    }
+  }
+}
+
+// Wait for DOM to be fully loaded before initializing
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM fully loaded, starting color palette initialization");
+  
+  // Initialize the color palette system
+  initColorPalette();
+  
+  // Force Bootstrap modal to be properly initialized
+  const colorModal = document.getElementById('colorPaletteModal');
+  if (colorModal) {
+    // Manually create modal instance with Bootstrap
+    try {
+      window.colorPaletteModalInstance = new bootstrap.Modal(colorModal);
+      console.log("Modal instance created successfully");
+    } catch (error) {
+      console.error("Error creating modal instance:", error);
+    }
+    
+    // Add manual event listener to color palette button
+    const colorButton = document.getElementById('openColorPaletteBtn');
+    if (colorButton) {
+      console.log("Color button found, adding click handler");
+      colorButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log("Color button clicked");
+        
+        // Use pure JavaScript to show the modal
+        const modal = document.getElementById('colorPaletteModal');
+        if (modal) {
+          console.log("Showing modal with direct DOM manipulation");
+          modal.classList.add('show');
+          modal.style.display = 'block';
+          modal.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('modal-open');
+          
+          // Add backdrop
+          const backdrop = document.createElement('div');
+          backdrop.className = 'modal-backdrop fade show';
+          backdrop.id = 'color-palette-backdrop';
+          document.body.appendChild(backdrop);
+          
+          // Set up close button functionality
+          const closeButtons = modal.querySelectorAll('[data-bs-dismiss="modal"], .btn-close');
+          closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+              closeColorPaletteModal();
+            });
+          });
+          
+          // Also close on backdrop click
+          backdrop.addEventListener('click', function() {
+            closeColorPaletteModal();
+          });
+        } else {
+          console.error("Modal element not found");
+        }
+      });
+    } else {
+      console.error("Color button not found");
+    }
+  } else {
+    console.error("Color palette modal element not found in DOM");
+  }
+});
