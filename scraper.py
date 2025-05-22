@@ -33,7 +33,7 @@ class YelpScraper:
             "street_formats": ["{num} {name} St", "{num} {name} Ave", "{num} {name} Rd"],
             "street_names": ["Queen", "King", "Yonge", "Bay", "Front", "College", "Bloor", "Spadina", "Dundas"],
             "drink_deals": ["{currency}4 pints", "{currency}6 cocktails", "half-price wine bottles", "{currency}5 craft beers"],
-            "food_deals": ["half-price poutine", "{currency}5 nachos", "{currency}2 sliders", "discounted wings"]
+            "food_deals": ["half-price poutine", "€5 nachos", "€2 sliders", "discounted wings"]
         },
         
         # Europe
@@ -43,8 +43,8 @@ class YelpScraper:
             "business_types": ["Pub", "Tavern", "Arms", "Inn", "Brewery", "Lounge", "Bar"],
             "street_formats": ["{num} {name} Street", "{num} {name} Road", "{num} {name} Lane"],
             "street_names": ["High", "Church", "Station", "London", "Victoria", "King", "Queen", "Castle", "Bridge"],
-            "drink_deals": ["{currency}3 pints", "2-for-1 on ales", "{currency}4 house wines", "half-price gin & tonics"],
-            "food_deals": ["half-price pub snacks", "{currency}5 fish & chips", "free bar nuts with drinks", "discounted Sunday roast"]
+            "drink_deals": ["£3 pints", "2-for-1 on ales", "£4 house wines", "half-price gin & tonics"],
+            "food_deals": ["half-price pub snacks", "£5 fish & chips", "free bar nuts with drinks", "discounted Sunday roast"]
         },
         "fr": {
             "currency": "€",
@@ -52,8 +52,8 @@ class YelpScraper:
             "business_types": ["Bar", "Bistro", "Café", "Brasserie", "Taverne", "Cave"],
             "street_formats": ["{num} Rue {name}", "{num} Avenue {name}", "{num} Boulevard {name}"],
             "street_names": ["Saint-Michel", "Rivoli", "Montmartre", "République", "Bastille", "Champs-Élysées"],
-            "drink_deals": ["{currency}4 house wines", "{currency}3 pression", "happy hour sur cocktails", "2ème verre à moitié prix"],
-            "food_deals": ["planche de fromage offerte", "tapas à {currency}5", "moules à prix réduit", "amuse-bouches gratuits"]
+            "drink_deals": ["€4 house wines", "€3 pression", "happy hour sur cocktails", "2ème verre à moitié prix"],
+            "food_deals": ["planche de fromage offerte", "tapas à €5", "moules à prix réduit", "amuse-bouches gratuits"]
         },
         "de": {
             "currency": "€",
