@@ -6,13 +6,13 @@ import os
 import multiprocessing
 
 # Worker configuration - optimized for Replit deployment
-workers = 1
+workers = 1  
 threads = 2
 worker_class = "sync"
 
 # Timeouts - adjusted for application startup
-timeout = 120
-graceful_timeout = 60
+timeout = 60
+graceful_timeout = 30
 keepalive = 5
 
 # Logging configuration
@@ -26,5 +26,5 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '5000')}"
 # Production settings
 daemon = False
 reload = False
-preload_app = False
+preload_app = True
 forwarded_allow_ips = "*"
