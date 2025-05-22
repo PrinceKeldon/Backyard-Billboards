@@ -165,7 +165,7 @@ def health_check():
         return jsonify({
             "status": "ok", 
             "timestamp": datetime.now().isoformat(),
-            "app_name": "Backyard Billboards",
+            "app_name": "Happy Hour Hub",
             "version": "1.0.0",
             "db_status": "connected",
             "deals_count": deals_count,
@@ -176,7 +176,7 @@ def health_check():
         return jsonify({
             "status": "error",
             "timestamp": datetime.now().isoformat(),
-            "app_name": "Backyard Billboards",
+            "app_name": "Happy Hour Hub",
             "message": str(e)
         }), 500
 
@@ -255,21 +255,8 @@ def home():
                 search_query in d.get('location', '').lower() or
                 (d.get('district') and search_query in d.get('district', '').lower())]
         
-        # Filter by deal type if specified
-        if deal_type:
-            if deal_type == 'drink':
-                # Filter for drink deals - expanded keywords for better matching
-                keywords = ['beer', 'cocktail', 'drink', 'wine', 'bier', 'wein', 'getränk', 'pilsner', 
-                           'draft', 'weiße', 'weinschorle', 'pint', 'brew', 'alcohol', 'booze', 'spirits',
-                           'shot', 'für-1', '2-für-1', 'happy hour']
-                filtered_deals = [d for d in filtered_deals if any(keyword in d.get('deal', '').lower() for keyword in keywords)]
-            elif deal_type == 'happy hour':
-                # Filter for explicit happy hour mentions or time-specific deals
-                filtered_deals = [d for d in filtered_deals if 
-                                 'happy hour' in d.get('deal', '').lower() or 
-                                 'uhr:' in d.get('deal', '').lower() or
-                                 'pm:' in d.get('deal', '').lower() or
-                                 'am:' in d.get('deal', '').lower()]
+        # We've removed deal type filtering to unify all happy hour deals into one list
+        # This simplifies the user experience and displays all deals together
         
         # Get all unique districts for the filter dropdown
         # We should get districts from all deals, not just filtered ones, so reset works properly
