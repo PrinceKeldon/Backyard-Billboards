@@ -2,11 +2,11 @@
 
 /* Color palette variables */
 :root {
-    /* Dark mode colors */
-    --bb-primary: #8B2635;      /* Burgundy */
-    --bb-secondary: #2EC4B6;    /* Teal */
-    --bb-accent: #F9CB40;       /* Warm yellow */
-    --bb-light: #E6EBE0;        /* Off-white */
+    /* Happy Hour Hub colors */
+    --bb-primary: #FF595E;      /* Bright Red */
+    --bb-secondary: #FFCF3F;    /* Golden Yellow */
+    --bb-accent: #FFCF3F;       /* Gold */
+    --bb-light: #FFF5E1;        /* Cream */
     --bb-dark: #252525;         /* Dark gray */
     
     /* Cityscape color variables */
@@ -991,7 +991,66 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Responsive adjustments */
+/* Happy Hour Hub Responsive Design */
+/* Colors for the new design */
+:root {
+    --hh-primary: #FF595E;      /* Bright Red */
+    --hh-secondary: #FFCF3F;    /* Golden Yellow */
+    --hh-light: #FFF5E1;        /* Light cream */
+    --hh-dark: #252525;         /* Dark gray */
+    
+    /* Transitions */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Responsive Media Queries for cross-platform optimization */
 @media (max-width: 768px) {
+    /* Improve mobile layout */
+    .container {
+        padding: 1rem 10px;
+    }
+    
+    .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.9rem;
+        touch-action: manipulation;
+        min-height: 44px; /* Better touch targets */
+    }
+    
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+    
+    /* Improve touch targets for better accessibility */
+    .nav-link, 
+    .dropdown-item,
+    .btn-sm {
+        padding: 0.5rem 0.75rem;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+    
+    /* Adjust form elements for better touch */
+    .form-control, .form-select {
+        min-height: 46px;
+        font-size: 16px; /* Prevent iOS zoom */
+    }
+    
+    /* Improve spacing in cards */
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    /* Make deal cards more readable */
+    .deal-card .card-header h5 {
+        font-size: 1.1rem;
+    }
+    
+    /* Better filters layout */
+    .input-group, .btn-group {
+        width: 100%;
+    }
     .deal-card {
         margin-bottom: 1rem;
     }
