@@ -138,13 +138,12 @@ html, body {
 }
 
 .deal-card .card-header {
-    background-color: var(--bs-primary);
-    color: white;
+    background: linear-gradient(to right, var(--bb-primary), var(--bb-secondary));
+    color: #212529; /* Dark text for better contrast on colorful header */
     border-bottom: none;
     padding: 0.8rem 1rem;
     letter-spacing: 0.02em;
-    /* Add a slightly lighter background for contrast with white text */
-    background: linear-gradient(to right, #8f2a38, #9f2f3f);
+    font-weight: 500;
 }
 
 .deal-card .card-header h5 {
