@@ -5,30 +5,26 @@ Gunicorn configuration file for Backyard Billboards application
 import os
 import multiprocessing
 
-# Port configuration - using exactly the format requested
-# This is critical for deployment - must use PORT env variable
-port = int(os.environ.get("PORT", "5000"))
-bind = f"0.0.0.0:{port}"
-
-# Worker configuration - simple and reliable for Replit
+# Worker configuration - optimized for Replit deployment
 workers = 1
 threads = 2
 worker_class = "sync"
 
-# Timeouts - more generous for application startup
-timeout = 300
-graceful_timeout = 120
-keepalive = 60
+# Timeouts - adjusted for application startup
+timeout = 120
+graceful_timeout = 60
+keepalive = 5
 
-# Logging - stdout/stderr for easy troubleshooting
+# Logging configuration
 accesslog = "-"
 errorlog = "-"
-loglevel = "debug"  # Increased log level for deployment troubleshooting
+loglevel = "info"
 
-# Deployment settings
+# Bind to PORT environment variable
+bind = f"0.0.0.0:{os.environ.get('PORT', '5000')}"
+
+# Production settings
 daemon = False
-reload = False  # Disable reload in production
-preload_app = False  # Don't preload for better error handling
-
-# Application specific settings
-forwarded_allow_ips = "*"  # Important for proxy settings
+reload = False
+preload_app = False
+forwarded_allow_ips = "*"

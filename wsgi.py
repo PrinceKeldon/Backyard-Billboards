@@ -1,6 +1,6 @@
 
 """
-WSGI application entry point for Happy Hour Hub
+WSGI application entry point for Backyard Billboards
 This file serves as the main module for deployment
 """
 from app import app as application
