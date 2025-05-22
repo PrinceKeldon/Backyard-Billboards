@@ -440,4 +440,20 @@ function updateRgbValue(hex, cssVar) {
 }
 
 // Initialize the color palette system
-initColorPaletteSystem();
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM loaded, initializing color palette system...');
+  initColorPaletteSystem();
+  
+  // Set up the Colors button click handler
+  const colorButton = document.getElementById('openColorPaletteBtn');
+  if (colorButton) {
+    console.log('Found Colors button, adding click handler');
+    colorButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Colors button clicked');
+      showColorPickerModal();
+    });
+  } else {
+    console.error('Colors button not found!');
+  }
+});

@@ -1,0 +1,117 @@
+The error you’re seeing is caused by a **mismatch between your deployment configuration and how your app is set up to run**, specifically related to:
+
+* Gunicorn’s run command (`wsgi:application`)
+* The actual app file (`app.py`)
+* The port configuration (hardcoded port vs environment variable)
+
+Here’s how to **fix the issue step-by-step**:
+
+---
+
+### ✅ **1. Fix the Gunicorn App Reference**
+
+**Problem:** You're using `wsgi:application`, but the app is defined in `app.py`.
+
+**Solution:** Either:
+
+* **Create a `wsgi.py` file** that imports the app from `app.py`:
+
+  ```python
+  # wsgi.py
+  from app import app
+
+  application = app
+  ```
+
+  Then the run command `gunicorn wsgi:application` will work correctly.
+
+**OR**
+
+* **Update the Gunicorn run command** to reference `app:app` instead of `wsgi:application`:
+
+  ```bash
+  gunicorn app:app
+  ```
+
+Choose one method and stay consistent across the config.
+
+---
+
+### ✅ **2. Fix the Port Configuration**
+
+**Problem:** Gunicorn is binding to `0.0.0.0:<PORT>` (environment-based), but somewhere else it’s hardcoded to port `5000`.
+
+**Solution:**
+
+* Make sure your app **dynamically reads the port from the environment**, e.g.:
+
+  ```python
+  import os
+
+  if __name__ == "__main__":
+      port = int(os.environ.get("PORT", 5000))
+      app.run(host="0.0.0.0", port=port)
+  ```
+
+* Remove any **hardcoded `port=5000`** in production-related files like `gunicorn_config.py`, Dockerfiles, or shell scripts.
+
+---
+
+### ✅ **3. Check and Sync Gunicorn Configuration**
+
+If you're using a custom `gunicorn_config.py`, make sure it does **not override the port** incorrectly.
+
+* Remove or comment out any hardcoded line like:
+
+  ```python
+  bind = "0.0.0.0:5000"
+  ```
+
+* Or replace with:
+
+  ```python
+  import os
+  port = os.environ.get("PORT", "8000")
+  bind = f"0.0.0.0:{port}"
+  ```
+
+---
+
+### ✅ **4. Final Consistency Check**
+
+Ensure the following are all aligned:
+
+* `Procfile` or deployment `run` command → matches your main app file and app object (e.g. `gunicorn app:app`)
+* `PORT` environment variable is passed and used
+* `wsgi.py` is used only if referenced as `wsgi:application`
+* `gunicorn_config.py` doesn’t conflict with dynamic port settings
+
+---
+
+### ✅ Example Working Setup
+
+**File: `app.py`**
+
+```python
+from flask import Flask
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Hello, Happy Hour Hub!"
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+```
+
+**Deployment Command:**
+
+```bash
+gunicorn app:app
+```
+
+---
+
+Let me know if you're deploying on a specific platform like Replit, Heroku, or Fly.io, and I can tailor the config even further.
