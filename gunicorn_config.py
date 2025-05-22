@@ -21,6 +21,7 @@ errorlog = "-"
 loglevel = "info"
 
 # Bind to PORT environment variable
+# Default to port 5000 for consistency
 bind = f"0.0.0.0:{os.environ.get('PORT', '5000')}"
 
 # Production settings
