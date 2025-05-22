@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if request.args.get('deal') %}{{ request.args.get('deal') }} - Happy Hour at {{ request.args.get('business') }}{% else %}Backyard Billboards - Happy Hour Deals{% endif %}{% endblock %}
+{% block title %}{% if request.args.get('deal') %}{{ request.args.get('deal') }} - Happy Hour at {{ request.args.get('business') }}{% else %}Happy Hour Hub - Happy Hour Deals{% endif %}{% endblock %}
 
-{% block og_title %}{% if request.args.get('deal') %}{{ request.args.get('business') }} - {{ request.args.get('deal') }}{% else %}Backyard Billboards - Happy Hour Deals in Berlin{% endif %}{% endblock %}
+{% block og_title %}{% if request.args.get('deal') %}{{ request.args.get('business') }} - {{ request.args.get('deal') }}{% else %}Happy Hour Hub - Happy Hour Deals in Berlin{% endif %}{% endblock %}
 
 {% block og_description %}{% if request.args.get('deal') %}{{ request.args.get('deal') }} at {{ request.args.get('business') }} in {{ request.args.get('location', 'Berlin') }}{% else %}Discover the best happy hour deals in Berlin. Save money on drinks and food at your favorite local spots.{% endif %}{% endblock %}
 
@@ -24,13 +24,17 @@
         <!-- Search and Filter Form -->
         <form action="{{ url_for('home') }}" method="GET" id="searchFilterForm">
             <div class="row g-2">
-                <!-- Search box -->
+                <!-- Enhanced Search box -->
                 <div class="col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-search"></i>
+                    <div class="input-group search-container">
+                        <span class="input-group-text" style="background-color: #FFF5E1; border-radius: 20px 0 0 20px; border: 2px solid #FFCF3F; border-right: none;">
+                            <i class="fas fa-search" style="color: #FF595E;"></i>
                         </span>
-                        <input type="text" class="form-control" placeholder="Search deals..." name="search" value="{{ search_query or '' }}">
+                        <input type="text" class="form-control search-input" 
+                               placeholder="Search happy hours..." 
+                               name="search" 
+                               value="{{ search_query or '' }}"
+                               style="border-radius: 0 20px 20px 0; border: 2px solid #FFCF3F; border-left: none; font-family: 'Poppins', sans-serif; background-color: #FFF5E1; color: #000;">
                     </div>
                 </div>
                 
