@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     # Import app modules - import wsgi.application to ensure consistent app reference
-    from wsgi import application as app
+    from wsgi import application
     from app import clear_cache, cache
     import models
     logger.info("Successfully imported application modules")
@@ -135,4 +135,4 @@ if __name__ == "__main__":
     if success:
         print("Application reset successful. All checks passed.")
     else:
-        print("Application reset completed but some issues were detected.")
+        print("Application reset completed but some issues were detected.")")
