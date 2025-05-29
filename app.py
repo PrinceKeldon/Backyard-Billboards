@@ -170,7 +170,7 @@ def health_check():
             "db_status": "connected",
             "deals_count": deals_count,
             "hidden_gems_count": gems_count
-        })
+        }), 200
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return jsonify({

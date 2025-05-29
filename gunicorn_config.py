@@ -22,7 +22,10 @@ loglevel = "info"
 
 # Bind to PORT environment variable
 # Default to port 5000 for consistency
-bind = f"0.0.0.0:{os.environ.get('PORT', '5000')}"
+port = os.environ.get('PORT', '5000')
+bind = f"0.0.0.0:{port}"
+print(f"Binding to port {port}")
+print(f"Full bind address: {bind}")
 
 # Production settings
 daemon = False
