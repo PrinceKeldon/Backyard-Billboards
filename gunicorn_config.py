@@ -1,6 +1,6 @@
 
 """
-Gunicorn configuration file for Backyard Billboards application
+Gunicorn configuration file for Happy Hour Hub application
 """
 import os
 import multiprocessing

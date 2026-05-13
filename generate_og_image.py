@@ -1,5 +1,5 @@
 """
-Generate default Open Graph image for Backyard Billboards
+Generate default Open Graph image for Happy Hour Hub
 """
 import os
 from PIL import Image, ImageDraw, ImageFont

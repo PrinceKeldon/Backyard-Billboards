@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Your Venue - Happy Hour Hub{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Manage Your Venue</h3>
+                </div>
+                <div class="card-body">
+                    {% if venue %}
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Venue Name</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ venue.name }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Address</label>
+                                <input type="text" class="form-control" id="address" name="address" value="{{ venue.address }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="district" class="form-label">District</label>
+                                <select class="form-select" id="district" name="district">
+                                    <option value="">Select District</option>
+                                    {% for d in ["Mitte", "Prenzlauer Berg", "Neukölln", "Wedding", "Kreuzberg", "Charlottenburg", "Schöneberg", "Friedrichshain", "Moabit", "Tiergarten", "Lichtenberg", "Köpenick", "Spandau", "Steglitz", "Marzahn", "Wilmersdorf", "Tempelhof", "Treptow", "Pankow", "Reinickendorf", "Zehlendorf"] %}
+                                        <option value="{{ d }}" {% if venue.district == d %}selected{% endif %}>{{ d }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="deal" class="form-label">Happy Hour Deal</label>
+                                <textarea class="form-control" id="deal" name="deal" rows="4" required>{{ venue.deal }}</textarea>
+                                <div class="form-text">Describe your offer (e.g., "2 for 1 Cocktails from 5pm-7pm").</div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">Update Listing</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i data-feather="alert-circle" class="text-warning mb-3" style="width: 48px; height: 48px;"></i>
+                            <h4>No Venue Found</h4>
+                            <p>You don't have a venue associated with your account yet.</p>
+                            <a href="{{ url_for('claim_venue') }}" class="btn btn-primary">Claim Existing Venue</a>
+                            <a href="{{ url_for('submit_deal') }}" class="btn btn-outline-secondary ms-2">Create New Listing</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

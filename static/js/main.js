@@ -1,5 +1,5 @@
 /**
- * Backyard Billboards - Main JavaScript
+ * Happy Hour Hub - Main JavaScript
  */
 
 // Wait for the DOM to be fully loaded

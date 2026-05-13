@@ -1,4 +1,4 @@
-/* Custom styles for Backyard Billboards */
+/* Custom styles for Happy Hour Hub */
 
 /* Color palette variables */
 :root {
@@ -296,6 +296,145 @@ html, body {
 .navbar-brand {
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+
+/* Modern UI Component Styles */
+
+/* Modern Card Styles */
+.card-modern {
+    border: 1px solid rgba(255, 89, 94, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.card-modern:hover {
+    border-color: rgba(255, 89, 94, 0.3);
+    box-shadow: 0 8px 16px rgba(255, 89, 94, 0.1);
+}
+
+/* Modern Form Controls */
+.form-control-modern,
+.form-select-modern {
+    border: 1px solid rgba(255, 89, 94, 0.15);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background-color: transparent;
+}
+
+.form-control-modern:focus,
+.form-select-modern:focus {
+    border-color: #FF595E;
+    box-shadow: 0 0 0 0.2rem rgba(255, 89, 94, 0.25);
+    background-color: transparent;
+}
+
+/* Modern Input Groups */
+.input-modern {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.input-modern .form-control,
+.input-modern .form-select {
+    box-shadow: none;
+    border-radius: 0 8px 8px 0;
+}
+
+.input-modern .input-group-text {
+    border-radius: 8px 0 0 8px;
+    background-color: #f8f9fa;
+    border: none;
+}
+
+/* Modern Primary Button */
+.btn-modern-primary {
+    background: linear-gradient(135deg, #FF595E 0%, #E63B41 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-modern-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 89, 94, 0.3);
+    color: white;
+}
+
+.btn-modern-primary:active {
+    transform: translateY(0);
+}
+
+/* Modern Tabs */
+.nav-modern .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border-radius: 0;
+}
+
+.nav-modern .nav-link:hover {
+    color: #FF595E;
+    border-bottom-color: rgba(255, 89, 94, 0.3);
+}
+
+.nav-modern .nav-link.active {
+    color: #FF595E;
+    border-bottom-color: #FF595E;
+    background-color: transparent;
+}
+
+/* Modern Table Styles */
+.table-modern {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.table-modern tbody tr {
+    border: 1px solid rgba(255, 89, 94, 0.1);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.table-modern tbody tr:hover {
+    box-shadow: 0 4px 8px rgba(255, 89, 94, 0.15);
+    background-color: rgba(255, 89, 94, 0.02);
+}
+
+/* Modern Alert Styles */
+.alert-modern {
+    border: 1px solid rgba(255, 89, 94, 0.2);
+    border-radius: 8px;
+    background-color: rgba(255, 89, 94, 0.05);
+    color: #252525;
+}
+
+.alert-sm {
+    border-radius: 6px;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* Utility Classes */
+.fw-600 {
+    font-weight: 600;
+}
+
+.fw-bold {
+    font-weight: 700;
+}
+
+/* Badge Styles */
+.badge {
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
 }
 
 .navbar-dark .navbar-nav .nav-link.active {

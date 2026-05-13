@@ -63,15 +63,15 @@ Happy Hour Hub is a Berlin-focused directory of happy hour deals. The applicatio
 | Language | Python 3.11 |
 | Web framework | Flask 3.0 |
 | Authentication | Flask-Login, Werkzeug password hashing |
-| Database | Replit Key-Value Store (`replit.db`) |
-| ORM / DB client | Direct `replit` library (no SQL ORM for deals; SQLAlchemy imported but not used for deal storage) |
+| Database | Netlify Database (PostgreSQL-compatible) |
+| ORM / DB client | `psycopg2` direct PostgreSQL client |
 | AI | OpenAI API (`openai` package) |
 | Image generation | Pillow (PIL) |
 | Web scraping | Requests, BeautifulSoup4, Trafilatura |
-| Frontend | Bootstrap 5, Feather Icons, Vanilla JavaScript |
+| Frontend | Bootstrap 5 (official CDN), Font Awesome, Vanilla JavaScript |
 | Colour theming | Custom JS (`color_palette_v2.js`) + CSS variables + localStorage |
 | WSGI server | Gunicorn 23 |
-| Deployment | Replit (via `wsgi:application`) |
+| Deployment | Standard WSGI host / Gunicorn |
 
 ---
 
@@ -146,7 +146,9 @@ Happy Hour Hub is a Berlin-focused directory of happy hour deals. The applicatio
 
 ## Data Model
 
-All data is stored in the **Replit Key-Value store** (`replit.db`). There is no SQL database for deals or users — everything lives as dictionaries under string keys.
+All data is stored in **Netlify Database** (PostgreSQL-compatible). The `db.py` module now uses `psycopg2` to read and write users, venues, and deals.
+
+See `db/schema.sql` for an example PostgreSQL schema compatible with the current `db.py` table layout.
 
 ### Deal record
 
@@ -196,7 +198,7 @@ The heart of the application (1,561 lines). Contains:
 - Jinja2 custom filters (`urlencode`, `to_time_ago`)
 
 ### `db.py` — `DealDB`
-Wraps the Replit KV store. Key methods:
+Wraps Netlify Database / PostgreSQL via `psycopg2`. Key methods:
 
 | Method | Description |
 |---|---|
@@ -243,8 +245,9 @@ Five built-in palettes: **Default** (yellow/red/cream), **Sunset**, **Ocean**, *
 |---|---|
 | `SESSION_SECRET` | Flask session signing key |
 | `OPENAI_API_KEY` | OpenAI API access for AI venue descriptions |
-| `DATABASE_URL` | PostgreSQL URL (present but Replit KV is used for deals/users) |
-| `PGDATABASE`, `PGHOST`, `PGPASSWORD`, `PGPORT`, `PGUSER` | PostgreSQL connection parts (not actively used by deal storage) |
+| `DATABASE_URL` | PostgreSQL URL for Netlify Database / Postgres storage |
+| `NETLIFY_DB_URL` | Alternative Netlify Database URL environment variable |
+| `PGDATABASE`, `PGHOST`, `PGPASSWORD`, `PGPORT`, `PGUSER` | PostgreSQL connection parts for database access if your deployment uses them |
 | `TELEGRAM_BOT_TOKEN` | Legacy Telegram integration (removed from active code) |
 | `TELEGRAM_CHAT_ID` | Legacy Telegram integration (removed from active code) |
 | `GITHUB_PERSONAL_ACCESS_TOKEN` | Used to push code to GitHub (not needed at runtime) |
@@ -268,9 +271,9 @@ App-level flags set in `app.py` at startup (not secrets):
 python main.py
 ```
 
-The app starts on `http://localhost:5000` with Flask's debug mode enabled.
+The app starts on `http://localhost:5000` with Flask's debug mode enabled when running via `python main.py`.
 
-### Development (Gunicorn, Replit workflow)
+### Development (Gunicorn, standard workflow)
 
 The **Start application** workflow runs:
 
@@ -304,7 +307,22 @@ curl -X POST http://localhost:5000/scrape -d "location=Berlin"
 
 ## Deployment
 
-The project deploys to Replit's hosting infrastructure via the `wsgi:application` entry point. Gunicorn binds to the `PORT` environment variable (defaulting to `8000` in `gunicorn_config.py`, `5000` in the workflow command).
+The front end is now built for standard web hosting and uses official Bootstrap CDN assets rather than Replit-specific theme styles. The project can be deployed to any WSGI-compatible host using `gunicorn wsgi:application`. Gunicorn binds to the `PORT` environment variable (defaulting to `8000` in `gunicorn_config.py`, `5000` in the workflow command).
+
+### Deploying to Netlify
+
+1. **Connect your repository** to Netlify via GitHub, GitLab, or Bitbucket
+2. **Set build command:** `pip install -r requirements.txt && python main.py` (or use a Netlify Functions wrapper)
+3. **Set publish directory:** root or specify as needed
+4. **Add environment variables** in Netlify UI (Settings → Build & deploy → Environment):
+   - `NETLIFY_DB_URL`: Your Netlify Database PostgreSQL connection string
+   - `SESSION_SECRET`: Flask session signing key (random string)
+   - `OPENAI_API_KEY`: OpenAI API key for AI recommendations
+
+For Netlify Functions (recommended for Python):
+- Use `netlify/functions/app.py` or similar structure
+- Ensure `db.py` imports work in the Functions context
+- Reference `NETLIFY_DB_URL` in environment variables
 
 The GitHub repository mirror is at: https://github.com/PrinceKeldon/Backyard-Billboards
 
@@ -313,9 +331,8 @@ The GitHub repository mirror is at: https://github.com/PrinceKeldon/Backyard-Bil
 ## Known Issues & Notes
 
 - **Deal data is generated, not live-scraped.** The `YelpScraper` class produces deals from a hardcoded list of 30+ real Berlin venues. There is no live connection to Yelp or Google Maps search — Google Maps data is used only to enrich existing entries when the scrape endpoint is called.
-- **Business name is the primary key.** Adding a deal with the same name as an existing one will overwrite it in the Replit KV store.
+- **UUID-based IDs.** Venues and deals are now created with UUIDs, so duplicate names no longer serve as the primary key in the Netlify Database storage.
 - **"Backyard Billboards" references.** Some internal strings (generated images, footer text) still reference the earlier project name. These are cosmetic and do not affect functionality.
 - **Duplicate `get_time_ago` in `utils.py`.** The file defines the function twice (different implementations). The second definition takes precedence at runtime.
-- **PostgreSQL is configured but unused for deals.** `flask-sqlalchemy` and `psycopg2-binary` are installed and `DATABASE_URL` is set, but all deal and user storage goes through the Replit KV store via `db.py`.
 - **Cache is in-process.** With multiple Gunicorn workers, each worker has its own cache. Setting `workers = 1` in `gunicorn_config.py` avoids stale cross-worker cache issues.
 - **Color palette changes are browser-local.** The chosen theme is saved in `localStorage` and does not sync across devices or users.

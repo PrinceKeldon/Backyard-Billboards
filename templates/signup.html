@@ -1,7 +1,7 @@
 
 {% extends 'base.html' %}
 
-{% block title %}Sign Up - Backyard Billboards{% endblock %}
+{% block title %}Sign Up - Happy Hour Hub{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -24,6 +24,15 @@
                         <label for="password" class="form-label">Password</label>
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
+                     <div class="mb-3">
+                         <label for="role" class="form-label">Account Type</label>
+                         <select class="form-select" id="role" name="role">
+                             <option value="user">Standard User</option>
+                             <option value="venue_owner">Venue Owner</option>
+                         </select>
+                         <div class="form-text">Venue Owners can manage their own business listings.</div>
+                     </div>
+
                     <button type="submit" class="btn btn-primary">Sign Up</button>
                 </form>
                 <p class="mt-3">

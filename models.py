@@ -4,11 +4,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from db import DealDB
 
 class User(UserMixin):
-    def __init__(self, id, username, email, password_hash):
+    def __init__(self, id, username, email, password_hash, role='user'):
         self.id = id
         self.username = username
         self.email = email
         self.password_hash = password_hash
+        self.role = role
+
+    @property
+    def is_venue_owner(self):
+        return self.role == 'venue_owner'
 
     @staticmethod
     def get(user_id):
@@ -19,15 +24,16 @@ class User(UserMixin):
                 id=user_id,
                 username=user_data['username'],
                 email=user_data.get('email', 'user@example.com'),  # Provide a default email if none exists
-                password_hash=user_data['password_hash']
+                password_hash=user_data['password_hash'],
+                role=user_data.get('role', 'user')
             )
         return None
 
     @staticmethod
-    def create(username, email, password):
+    def create(username, email, password, role='user'):
         db = DealDB()
         password_hash = generate_password_hash(password)
-        return db.add_user(username, email, password_hash)
+        return db.add_user(username, email, password_hash, role)
 
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)

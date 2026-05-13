@@ -163,12 +163,13 @@
                             </button>-->
                         </li>
                         <li>
-                            <form action="{{ url_for('delete_deal') }}" method="POST" class="d-inline">
-                                <input type="hidden" name="business_name" value="{{ deal.business_name }}">
-                                <button type="submit" class="dropdown-item text-danger">
-                                    <i class="fas fa-trash-alt me-2"></i> Delete
-                                </button>
-                            </form>
+                                 <form action="{{ url_for('delete_deal') }}" method="POST" class="d-inline">
+                                     <input type="hidden" name="venue_id" value="{{ deal.venue_id }}">
+                                     <button type="submit" class="dropdown-item text-danger">
+                                     <i class="fas fa-trash-alt me-2"></i> Delete
+                                     </button>
+                                 </form>
+
                         </li>
                     </ul>
                 </div>
@@ -225,10 +226,11 @@
             </div>
             <div class="card-footer text-muted d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
-                    <button class="btn btn-sm upvote-btn me-2" data-business="{{ deal.business_name }}" title="Upvote this deal">
-                        <i class="fas fa-thumbs-up"></i>
-                        <span class="upvote-count">{{ deal.votes|default(0) }}</span>
-                    </button>
+                                 <button class="btn btn-sm upvote-btn me-2" data-venue="{{ deal.venue_id }}" title="Upvote this deal">
+                                     <i class="fas fa-thumbs-up"></i>
+                                     <span class="upvote-count">{{ deal.votes|default(0) }}</span>
+                                 </button>
+
                     <small>
                         <i class="far fa-clock me-1"></i>
                         {% if deal.scraped_at %}
@@ -420,7 +422,8 @@
             button.addEventListener('click', function(e) {
                 e.preventDefault();
                 
-                const businessName = this.getAttribute('data-business');
+                                 const venueId = this.getAttribute('data-venue');
+
                 const voteCountElement = this.querySelector('.upvote-count');
                 
                 // Show animation when button is clicked
@@ -433,7 +436,8 @@
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'X-Requested-With': 'XMLHttpRequest' // Mark as AJAX request
                     },
-                    body: `business_name=${encodeURIComponent(businessName)}`
+                                 body: `venue_id=${encodeURIComponent(venueId)}`
+
                 })
                 .then(response => response.json())
                 .then(data => {

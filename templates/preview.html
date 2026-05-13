@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Local Preview - Happy Hour Hub{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-5">
+    <div class="col-lg-8">
+        <h1 class="display-4 fw-bold">
+            Local Front-End Preview
+        </h1>
+        <p class="lead text-muted">
+            Preview the hosted web UI from your development server. This page demonstrates the current layout, cards, forms, and interactive elements.
+        </p>
+    </div>
+    <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+        <a href="{{ url_for('home') }}" class="btn btn-outline-light btn-lg">
+            <i class="fas fa-arrow-left me-2"></i>Return to Home
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <div class="card card-modern shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">Navigation + Theme Preview</h5>
+                <p class="card-text text-muted">This page uses the same Bootstrap-based layout as the hosted front end, including the live navigation bar and footer styling.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-modern-primary">Primary</button>
+                    <button class="btn btn-outline-secondary">Secondary</button>
+                    <button class="btn btn-light">Light</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card card-modern shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">Color Palette Preview</h5>
+                <p class="card-text text-muted">Use the color customizer in the main navigation to preview your theme in real time.</p>
+                <div class="row g-3">
+                    <div class="col-6"><div class="p-3 rounded text-white" style="background: var(--bb-primary);">Primary</div></div>
+                    <div class="col-6"><div class="p-3 rounded text-white" style="background: var(--bb-secondary);">Secondary</div></div>
+                    <div class="col-6"><div class="p-3 rounded text-dark" style="background: var(--bb-light);">Light</div></div>
+                    <div class="col-6"><div class="p-3 rounded text-white" style="background: var(--bb-dark);">Dark</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for deal in sample_deals %}
+    <div class="col">
+        <div class="card card-modern h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">{{ deal.name }}</h5>
+                <p class="text-muted mb-2">{{ deal.district }} · {{ deal.location }}</p>
+                <p class="card-text">{{ deal.deal }}</p>
+            </div>
+            <div class="card-footer bg-transparent border-top d-flex justify-content-between align-items-center">
+                <span class="badge bg-warning text-dark">{{ deal.deal_type }}</span>
+                <a href="#" class="btn btn-sm btn-outline-primary">View</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-8">
+        <div class="card card-modern shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">Form Preview</h5>
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label">Example Input</label>
+                        <input type="text" class="form-control" placeholder="Type something here...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Example Select</label>
+                        <select class="form-select">
+                            <option>Option 1</option>
+                            <option>Option 2</option>
+                            <option>Option 3</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-modern-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

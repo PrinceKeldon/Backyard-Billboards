@@ -1,355 +1,351 @@
-import replit
-from datetime import datetime
+import os
 import logging
+import uuid
+from datetime import datetime
+from dotenv import load_dotenv
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
+load_dotenv()
 logger = logging.getLogger(__name__)
 
 class DealDB:
-    """Database class for managing happy hour deals and users"""
-    
-    def add_user(self, username, email, password_hash):
-        """Add a new user"""
+    def __init__(self):
+        self.database_url = os.environ.get('DATABASE_URL') or os.environ.get('NETLIFY_DB_URL')
+        if not self.database_url:
+            raise RuntimeError('DATABASE_URL or NETLIFY_DB_URL must be configured to use Netlify Database.')
+
+    def _get_conn(self):
+        return psycopg2.connect(self.database_url, cursor_factory=RealDictCursor)
+
+    def _fetch_one(self, query, params=None):
+        with self._get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params or ())
+                return cur.fetchone()
+
+    def _fetch_all(self, query, params=None):
+        with self._get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params or ())
+                return cur.fetchall()
+
+    def _execute(self, query, params=None, fetchone=False, fetchall=False):
+        with self._get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params or ())
+                if fetchone:
+                    return cur.fetchone()
+                if fetchall:
+                    return cur.fetchall()
+                return cur.rowcount
+
+    def _normalize_name(self, name):
+        return name.strip().lower() if isinstance(name, str) else ''
+
+    def _timestamp(self):
+        return datetime.utcnow()
+
+    def add_user(self, username, email, password_hash, role='user'):
         try:
-            # Check if username or email already exists
-            for user_data in self.db.values():
-                if isinstance(user_data, dict):
-                    if user_data.get('username') == username or user_data.get('email') == email:
-                        return False
-                        
-            self.db[username] = {
-                "password_hash": password_hash,
-                "username": username,
-                "email": email
-            }
+            if not username or not email or not password_hash:
+                return False
+            if self._fetch_one('SELECT 1 FROM users WHERE username = %s LIMIT 1', (username,)):
+                return False
+            if self._fetch_one('SELECT 1 FROM users WHERE email = %s LIMIT 1', (email,)):
+                return False
+            query = '''
+                INSERT INTO users (username, email, password_hash, role, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            '''
+            params = (username, email, password_hash, role, self._timestamp(), self._timestamp())
+            self._execute(query, params)
             return True
         except Exception as e:
-            logger.error(f"Error adding user: {str(e)}")
-            raise
+            logger.error(f'Error adding user: {e}')
+            return False
 
     def get_user(self, username):
-        """Get user data"""
         try:
-            if username in self.db:
-                return self.db[username]
+            return self._fetch_one('SELECT * FROM users WHERE username = %s LIMIT 1', (username,))
+        except Exception as e:
+            logger.error(f'Error fetching user: {e}')
             return None
-        except Exception as e:
-            logger.error(f"Error getting user: {str(e)}")
-            raise
-    
-    def __init__(self):
-        """Initialize database connection"""
+
+    def get_venue_id_by_name(self, business_name):
         try:
-            self.db = replit.db
-            logger.debug("Database initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing database: {str(e)}")
-            raise
-    
-    def add_deal(self, business_name, deal, location, **kwargs):
-        """
-        Add a deal to the database
-        
-        Args:
-            business_name (str): Name of the business
-            deal (str): Description of the deal
-            location (str): Location of the business
-            **kwargs: Additional properties including:
-                district (str): District/neighborhood (for Berlin)
-                has_accurate_location (bool): Whether location is accurate for mapping
-                rating (float): Google Maps rating (1-5)
-                reviews_count (int): Number of reviews
-                place_type (str): Type of establishment (Bar, Restaurant, etc.)
-                price_level (int): Price level (1-4)
-                google_maps_url (str): URL to Google Maps page
-                votes (int): Number of upvotes for this deal
-        """
-        try:
-            if not business_name or not deal or not location:
-                raise ValueError("All fields are required")
-            
-            deal_data = {
-                "deal": deal,
-                "location": location,
-                "scraped_at": str(datetime.now()),
-                "has_accurate_location": kwargs.get("has_accurate_location", False),
-                "votes": kwargs.get("votes", 0)  # Initialize votes to 0 by default
-            }
-            
-            # Add optional fields from kwargs
-            optional_fields = [
-                "district", "rating", "reviews_count", "place_type", 
-                "price_level", "google_maps_url", "is_hidden_gem",
-                "hidden_gem_description", "hidden_gem_tips", "hidden_gem_photo_url",
-                "submitted_by", "submission_type"
-            ]
-            
-            for field in optional_fields:
-                if field in kwargs and kwargs[field] is not None:
-                    deal_data[field] = kwargs[field]
-                
-            self.db[business_name] = deal_data
-            logger.debug(f"Added deal for {business_name}")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding deal: {str(e)}")
-            raise
-    
-    def get_deal(self, business_name):
-        """
-        Get a specific deal by business name
-        
-        Args:
-            business_name (str): Name of the business
-            
-        Returns:
-            dict: Deal data or None if not found
-        """
-        try:
-            if business_name in self.db:
-                return self.db[business_name]
-            return None
-        except Exception as e:
-            logger.error(f"Error getting deal: {str(e)}")
-            raise
-    
-    def get_all_deals(self):
-        """
-        Get all deals from the database
-        
-        Returns:
-            list: List of deals with business name included
-        """
-        try:
-            deals = []
-            logger.debug(f"DB keys: {list(self.db.keys())}")
-            
-            for business_name in self.db.keys():
-                try:
-                    deal_data = self.db[business_name]
-                    logger.debug(f"Deal data for {business_name}: {deal_data}")
-                    
-                    # Replit DB returns ObservedDict objects
-                    # Convert to a regular dictionary if needed
-                    if hasattr(deal_data, "value"):
-                        deal_data = deal_data.value
-                        
-                    # Skip if not a deal (in case other data is stored in the DB)
-                    if not isinstance(deal_data, dict):
-                        logger.debug(f"Skipping {business_name} as it's not a dictionary")
-                        continue
-                        
-                    # Check if it has the required fields
-                    if "deal" not in deal_data:
-                        logger.debug(f"Skipping {business_name} as it doesn't have a 'deal' field")
-                        continue
-                    
-                    # Add business name to the deal data
-                    deal_info = deal_data.copy()  # Create a copy to avoid modifying the original
-                    deal_info["business_name"] = business_name
-                    deals.append(deal_info)
-                except Exception as inner_e:
-                    logger.error(f"Error processing deal {business_name}: {str(inner_e)}")
-            
-            # Sort deals by scraped_at date (newest first)
-            deals.sort(key=lambda x: x.get("scraped_at", ""), reverse=True)
-            logger.debug(f"Returning {len(deals)} deals")
-            return deals
-        except Exception as e:
-            logger.error(f"Error getting all deals: {str(e)}")
-            raise
-    
-    def delete_deal(self, business_name):
-        """
-        Delete a deal from the database
-        
-        Args:
-            business_name (str): Name of the business
-        """
-        try:
-            if business_name in self.db:
-                del self.db[business_name]
-                logger.debug(f"Deleted deal for {business_name}")
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Error deleting deal: {str(e)}")
-            raise
-    
-    def clear_all_deals(self):
-        """Clear all deals from the database (use with caution)"""
-        try:
-            for key in self.db.keys():
-                del self.db[key]
-            logger.debug("Cleared all deals")
-            return True
-        except Exception as e:
-            logger.error(f"Error clearing deals: {str(e)}")
-            raise
-    
-    def upvote_deal(self, business_name):
-        """
-        Increment the vote count for a deal
-        
-        Args:
-            business_name (str): Name of the business
-            
-        Returns:
-            dict: Updated deal data with new vote count or None if not found
-        """
-        try:
-            if business_name not in self.db:
-                logger.warning(f"Cannot upvote non-existent deal: {business_name}")
+            if not business_name:
                 return None
-                
-            deal_data = self.db[business_name]
-            
-            # Convert to a regular dictionary if needed
-            if hasattr(deal_data, "value"):
-                deal_data = deal_data.value
-                
-            # Ensure votes field exists
-            if "votes" not in deal_data:
-                deal_data["votes"] = 0
-                
-            # Increment vote count
-            deal_data["votes"] += 1
-            
-            # Update the deal in the database
-            self.db[business_name] = deal_data
-            logger.debug(f"Upvoted deal for {business_name}, new count: {deal_data['votes']}")
-            
-            # Return the updated deal data with the business name included
-            result = deal_data.copy()
-            result["business_name"] = business_name
-            return result
+            normalized = self._normalize_name(business_name)
+            row = self._fetch_one('SELECT id FROM venues WHERE name_lower = %s LIMIT 1', (normalized,))
+            return row.get('id') if row else None
         except Exception as e:
-            logger.error(f"Error upvoting deal: {str(e)}")
-            raise
-            
-    def get_top_voted_deals(self, limit=10):
-        """
-        Get deals sorted by vote count (highest first)
-        
-        Args:
-            limit (int): Maximum number of deals to return
-            
-        Returns:
-            list: List of deals sorted by votes
-        """
+            logger.error(f'Error finding venue by name: {e}')
+            return None
+
+    def get_venue(self, venue_id):
         try:
-            deals = self.get_all_deals()
-            
-            # Ensure each deal has a votes field (default to 0 if missing)
-            for deal in deals:
-                if "votes" not in deal:
-                    deal["votes"] = 0
-                    
-            # Sort by votes (highest first)
-            sorted_deals = sorted(deals, key=lambda x: x.get("votes", 0), reverse=True)
-            
-            # Return at most 'limit' deals
-            return sorted_deals[:limit]
+            return self._fetch_one('SELECT * FROM venues WHERE id = %s LIMIT 1', (venue_id,))
         except Exception as e:
-            logger.error(f"Error getting top voted deals: {str(e)}")
-            raise
-            
-    def get_hidden_gems(self, district=None, limit=None):
-        """
-        Get deals marked as hidden gems
-        
-        Args:
-            district (str, optional): Filter by district
-            limit (int, optional): Maximum number of deals to return
-            
-        Returns:
-            list: List of hidden gem deals
-        """
+            logger.error(f'Error fetching venue: {e}')
+            return None
+
+    def get_all_deals(self):
         try:
-            deals = self.get_all_deals()
-            
-            # Filter deals that are marked as hidden gems
-            hidden_gems = [deal for deal in deals if deal.get("is_hidden_gem") == True]
-            
-            # Apply district filter if provided
-            if district:
-                hidden_gems = [deal for deal in hidden_gems if deal.get("district") == district]
-                
-            # Sort hidden gems by votes (highest first)
-            hidden_gems = sorted(hidden_gems, key=lambda x: x.get("votes", 0), reverse=True)
-            
-            # Apply limit if provided
-            if limit:
-                hidden_gems = hidden_gems[:limit]
-                
-            logger.debug(f"Returning {len(hidden_gems)} hidden gems")
-            return hidden_gems
+            return self._fetch_all('SELECT * FROM venues ORDER BY created_at DESC') or []
         except Exception as e:
-            logger.error(f"Error getting hidden gems: {str(e)}")
-            raise
-    
-    def get_late_night_deals(self, limit=None):
-        """
-        Get deals that are available after 10 PM (afterparty deals)
-        
-        Args:
-            limit (int, optional): Maximum number of deals to return
-            
-        Returns:
-            list: List of late night deals
-        """
+            logger.error(f'Error fetching all deals: {e}')
+            return []
+
+    def get_hidden_gems(self):
         try:
-            deals = self.get_all_deals()
-            late_night_deals = []
-            
-            for deal in deals:
-                deal_text = deal.get('deal', '').lower()
-                
-                # Check for time indicators after 10 PM
-                has_late_time = False
-                if any(time_str in deal_text for time_str in [
-                    '22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
-                    '10pm', '11pm', '12am', '1am', '2am', '3am', '4am', '5am', 
-                    '22 uhr', '23 uhr', '00 uhr', '01 uhr', '02 uhr', '03 uhr', '04 uhr', '05 uhr',
-                    'midnight', 'mitternacht', 'late night', 'after 10'
-                ]):
-                    has_late_time = True
-                
-                # Check for after-hours indicators
-                is_afterparty = any(indicator in deal_text for indicator in [
-                    'afterparty', 'after party', 'after-party', 'after hours', 
-                    'late night', 'nachts', 'night owl', 'spätabends'
-                ])
-                
-                # Check for shot specials
-                has_shots = any(shot_term in deal_text for shot_term in [
-                    'shot', 'shots', 'schnapps', 'schnaps', 'jägermeister', 'tequila', 'vodka'
-                ])
-                
-                # Add to late night deals if it meets the criteria
-                if has_late_time or is_afterparty:
-                    # Create a copy of the deal
-                    late_night_deal = deal.copy()
-                    
-                    # Add premium flag for deals with shots (for 2x revenue share)
-                    if has_shots:
-                        late_night_deal['is_premium'] = True
-                        late_night_deal['revenue_multiplier'] = 2
-                    
-                    late_night_deals.append(late_night_deal)
-            
-            # Sort late night deals by whether they're premium (shots) first, then by votes
-            late_night_deals = sorted(
-                late_night_deals, 
-                key=lambda x: (x.get('is_premium', False), x.get('votes', 0)), 
-                reverse=True
+            return self._fetch_all('SELECT * FROM venues WHERE is_hidden_gem = TRUE ORDER BY votes DESC') or []
+        except Exception as e:
+            logger.error(f'Error fetching hidden gems: {e}')
+            return []
+
+    def search_venues(self, query=None, district=None):
+        try:
+            query = self._normalize_name(query) if query else ''
+            venues = self.get_all_deals()
+            results = []
+            for venue in venues:
+                if district and venue.get('district', '').lower() != district.strip().lower():
+                    continue
+                if query:
+                    name_matches = query in self._normalize_name(venue.get('name', ''))
+                    district_matches = query in self._normalize_name(venue.get('district', ''))
+                    description_matches = query in self._normalize_name(venue.get('description', ''))
+                    if not (name_matches or district_matches or description_matches):
+                        continue
+                results.append(venue)
+            return results
+        except Exception as e:
+            logger.error(f'Error searching venues: {e}')
+            return []
+
+    def get_late_night_deals(self):
+        try:
+            keywords = ['22:00', '10pm', '10 pm', 'late night', 'after 10', 'night']
+            venues = self.get_all_deals()
+            return [venue for venue in venues if any(keyword in (venue.get('deal') or '').lower() for keyword in keywords)]
+        except Exception as e:
+            logger.error(f'Error fetching late night deals: {e}')
+            return []
+
+    def create_venue(self, name, address, owner_id, district, deal, is_hidden_gem=False, hidden_gem_description='', hidden_gem_tips='', has_accurate_location=False):
+        try:
+            if not name or not address:
+                return None
+            venue_id = str(uuid.uuid4())
+            query = '''
+                INSERT INTO venues (
+                    id, name, name_lower, address, owner_id, district, location, deal,
+                    votes, created_at, updated_at, is_hidden_gem, hidden_gem_description,
+                    hidden_gem_tips, has_accurate_location, opening_hours, happy_hour_price,
+                    latitude, longitude, description, place_type, rating
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            '''
+            params = (
+                venue_id,
+                name,
+                self._normalize_name(name),
+                address,
+                owner_id,
+                district,
+                address,
+                deal,
+                0,
+                self._timestamp(),
+                self._timestamp(),
+                bool(is_hidden_gem),
+                hidden_gem_description,
+                hidden_gem_tips,
+                bool(has_accurate_location),
+                '',
+                '',
+                None,
+                None,
+                '',
+                '',
+                None,
             )
-            
-            # Apply limit if provided
-            if limit:
-                late_night_deals = late_night_deals[:limit]
-            
-            logger.debug(f"Returning {len(late_night_deals)} late night deals")
-            return late_night_deals
+            row = self._fetch_one(query, params)
+            return row.get('id') if row else None
         except Exception as e:
-            logger.error(f"Error getting late night deals: {str(e)}")
-            raise
+            logger.error(f'Error creating venue: {e}')
+            return None
+
+    def update_venue_deal(self, venue_id, deal, name=None, address=None, district=None, has_accurate_location=None):
+        try:
+            columns = ['updated_at = %s']
+            params = [self._timestamp()]
+            if name is not None:
+                columns.append('name = %s')
+                columns.append('name_lower = %s')
+                params.extend([name, self._normalize_name(name)])
+            if address is not None:
+                columns.append('address = %s')
+                columns.append('location = %s')
+                params.extend([address, address])
+            if district is not None:
+                columns.append('district = %s')
+                params.append(district)
+            if deal is not None:
+                columns.append('deal = %s')
+                params.append(deal)
+            if has_accurate_location is not None:
+                columns.append('has_accurate_location = %s')
+                params.append(bool(has_accurate_location))
+            query = f"UPDATE venues SET {', '.join(columns)} WHERE id = %s"
+            params.append(venue_id)
+            self._execute(query, tuple(params))
+            return True
+        except Exception as e:
+            logger.error(f'Error updating venue deal: {e}')
+            return False
+
+    def update_venue_details(self, venue_id, updates):
+        try:
+            columns = ['updated_at = %s']
+            params = [self._timestamp()]
+            if 'opening_hours' in updates:
+                columns.append('opening_hours = %s')
+                params.append(updates.get('opening_hours', ''))
+            if 'happy_hour_price' in updates:
+                columns.append('happy_hour_price = %s')
+                params.append(updates.get('happy_hour_price', ''))
+            if 'latitude' in updates:
+                latitude = updates.get('latitude')
+                columns.append('latitude = %s')
+                params.append(float(latitude) if latitude not in [None, ''] else None)
+            if 'longitude' in updates:
+                longitude = updates.get('longitude')
+                columns.append('longitude = %s')
+                params.append(float(longitude) if longitude not in [None, ''] else None)
+            if 'description' in updates:
+                columns.append('description = %s')
+                params.append(updates.get('description', ''))
+            query = f"UPDATE venues SET {', '.join(columns)} WHERE id = %s"
+            params.append(venue_id)
+            self._execute(query, tuple(params))
+            return True
+        except Exception as e:
+            logger.error(f'Error updating venue details: {e}')
+            return False
+
+    def upvote_venue(self, venue_id):
+        try:
+            query = '''
+                UPDATE venues
+                SET votes = votes + 1, updated_at = %s
+                WHERE id = %s
+                RETURNING *
+            '''
+            return self._fetch_one(query, (self._timestamp(), venue_id))
+        except Exception as e:
+            logger.error(f'Error upvoting venue: {e}')
+            return None
+
+    def get_deals_by_venue(self, venue_id):
+        try:
+            return self._fetch_all('SELECT * FROM deals WHERE venue_id = %s ORDER BY created_at DESC', (venue_id,)) or []
+        except Exception as e:
+            logger.error(f'Error fetching deals for venue: {e}')
+            return []
+
+    def create_deal(self, venue_id, deal_data):
+        try:
+            if not self.get_venue(venue_id):
+                return None
+            deal_id = str(uuid.uuid4())
+            query = '''
+                INSERT INTO deals (
+                    id, venue_id, name, days, start_time, end_time, discount,
+                    description, created_at, updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            '''
+            params = (
+                deal_id,
+                venue_id,
+                deal_data.get('name', ''),
+                deal_data.get('days', ''),
+                deal_data.get('start_time', ''),
+                deal_data.get('end_time', ''),
+                int(deal_data.get('discount', 0)) if deal_data.get('discount') is not None else 0,
+                deal_data.get('description', ''),
+                self._timestamp(),
+                self._timestamp(),
+            )
+            return self._fetch_one(query, params)
+        except Exception as e:
+            logger.error(f'Error creating deal: {e}')
+            return None
+
+    def update_deal(self, venue_id, deal_id, updates):
+        try:
+            deal = self.get_deal(deal_id)
+            if not deal or str(deal.get('venue_id')) != str(venue_id):
+                return False
+            columns = ['updated_at = %s']
+            params = [self._timestamp()]
+            for key, value in updates.items():
+                if key in ['name', 'days', 'start_time', 'end_time', 'description']:
+                    columns.append(f'{key} = %s')
+                    params.append(value)
+                elif key == 'discount':
+                    columns.append('discount = %s')
+                    params.append(int(value) if value is not None else deal.get('discount', 0))
+            query = f"UPDATE deals SET {', '.join(columns)} WHERE id = %s"
+            params.append(deal_id)
+            self._execute(query, tuple(params))
+            return True
+        except Exception as e:
+            logger.error(f'Error updating deal: {e}')
+            return False
+
+    def delete_deal(self, venue_id, deal_id):
+        try:
+            deal = self.get_deal(deal_id)
+            if not deal or str(deal.get('venue_id')) != str(venue_id):
+                return False
+            rowcount = self._execute('DELETE FROM deals WHERE id = %s', (deal_id,))
+            return rowcount > 0
+        except Exception as e:
+            logger.error(f'Error deleting deal: {e}')
+            return False
+
+    def get_deal(self, deal_id):
+        try:
+            return self._fetch_one('SELECT * FROM deals WHERE id = %s LIMIT 1', (deal_id,))
+        except Exception as e:
+            logger.error(f'Error fetching deal: {e}')
+            return None
+
+    def get_venue_by_owner(self, owner_id):
+        try:
+            return self._fetch_one('SELECT * FROM venues WHERE owner_id = %s LIMIT 1', (owner_id,))
+        except Exception as e:
+            logger.error(f'Error getting venue by owner: {e}')
+            return None
+
+    def claim_venue(self, venue_id, owner_id):
+        try:
+            self._execute(
+                'UPDATE venues SET owner_id = %s, updated_at = %s WHERE id = %s',
+                (owner_id, self._timestamp(), venue_id),
+            )
+            return True
+        except Exception as e:
+            logger.error(f'Error claiming venue: {e}')
+            return False
+
+    def get_user_venues(self, owner_id):
+        try:
+            return self._fetch_all('SELECT * FROM venues WHERE owner_id = %s ORDER BY created_at DESC', (owner_id,)) or []
+        except Exception as e:
+            logger.error(f'Error fetching user venues: {e}')
+            return []
+
